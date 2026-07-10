@@ -6,6 +6,7 @@ import '../../l10n/language_provider.dart';
 import 'browse_screen.dart';
 import 'family_home_screen.dart';
 import '../welcome_screen.dart';
+import '../../services/auth_service.dart';
 
 class FamilyAuthScreen extends StatefulWidget {
   const FamilyAuthScreen({super.key});
@@ -143,6 +144,7 @@ class _SignUpTab extends StatefulWidget {
 }
 
 class _SignUpTabState extends State<_SignUpTab> {
+  final AuthService _authService = AuthService();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -165,6 +167,7 @@ class _SignUpTabState extends State<_SignUpTab> {
   }
 
   void _signUp() async {
+    _authService.currentUser;
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
@@ -275,6 +278,7 @@ class _SignInTab extends StatefulWidget {
 }
 
 class _SignInTabState extends State<_SignInTab> {
+  final AuthService _authService = AuthService();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _showPw = false;
@@ -288,6 +292,7 @@ class _SignInTabState extends State<_SignInTab> {
   }
 
   void _signIn() async {
+    _authService.currentUser;
     if (_phoneController.text.length < 10 || _passwordController.text.isEmpty) return;
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 1));
