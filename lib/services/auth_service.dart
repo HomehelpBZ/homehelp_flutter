@@ -10,7 +10,10 @@ class AuthService {
   // ── Helper: convert phone to fake email ───────────────────────────────────
   String phoneToEmail(String phone) {
     final cleaned = phone.trim().replaceAll(' ', '');
-    return '$cleaned@homehelp.app';
+    // Always store with leading 0 for consistency
+    // User enters 9 digits: 911000001 → 0911000001@homehelp.app
+    final normalized = cleaned.startsWith('0') ? cleaned : '0$cleaned';
+    return '$normalized@homehelp.app';
   }
 
   // ── Email / Password ──────────────────────────────────────────────────────

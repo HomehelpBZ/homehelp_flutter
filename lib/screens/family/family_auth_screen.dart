@@ -179,7 +179,7 @@ class _SignUpTabState extends State<_SignUpTab> {
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty &&
       _phoneController.text.length == 9 &&
-      _passwordController.text.length >= 6 &&
+      _passwordController.text.length >= 8 &&
       _passwordController.text == _confirmController.text;
 
   @override
@@ -325,6 +325,34 @@ class _SignUpTabState extends State<_SignUpTab> {
               ),
             ),
           ),
+          const SizedBox(height: 4),
+          Row(children: [
+            Icon(
+              _passwordController.text.isEmpty
+                  ? Icons.info_outline
+                  : _passwordController.text.length >= 8
+                      ? Icons.check_circle
+                      : Icons.cancel,
+              size: 13,
+              color: _passwordController.text.isEmpty
+                  ? AppTheme.grey400
+                  : _passwordController.text.length >= 8
+                      ? AppTheme.primary
+                      : AppTheme.red,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Minimum 8 characters',
+              style: TextStyle(
+                fontSize: 11,
+                color: _passwordController.text.isEmpty
+                    ? AppTheme.grey400
+                    : _passwordController.text.length >= 8
+                        ? AppTheme.primary
+                        : AppTheme.red,
+              ),
+            ),
+          ]),
           const SizedBox(height: 14),
 
           SectionLabel(s.confirmPassword),
