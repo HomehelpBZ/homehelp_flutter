@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
-import 'browse_screen.dart';
+import '../../services/auth_service.dart';
 import 'family_home_screen.dart';
 import '../welcome_screen.dart';
-import '../../services/auth_service.dart';
+import '../shared/otp_screen.dart';
 
 class FamilyAuthScreen extends StatefulWidget {
   const FamilyAuthScreen({super.key});
@@ -48,33 +48,44 @@ class _FamilyAuthScreenState extends State<FamilyAuthScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton.icon(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 16),
-                        label: Text(s.home, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        icon: const Icon(Icons.arrow_back,
+                            color: Colors.white70, size: 16),
+                        label: Text(s.home,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13)),
                         onPressed: () => Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const WelcomeScreen()),
                           (r) => false,
                         ),
-                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero),
                       ),
                       const LangToggleButton(),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    width: 52, height: 52,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.search, size: 26, color: Colors.white),
+                    child: const Icon(Icons.search,
+                        size: 26, color: Colors.white),
                   ),
                   const SizedBox(height: 10),
                   Text(s.findAHousekeeper,
-                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w500)),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500)),
                   const SizedBox(height: 3),
                   Text(s.familyAuthSubtitle,
-                      style: const TextStyle(color: Color(0xAAFFFFFF), fontSize: 12),
+                      style: const TextStyle(
+                          color: Color(0xAAFFFFFF), fontSize: 12),
                       textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   Container(
@@ -85,13 +96,16 @@ class _FamilyAuthScreenState extends State<FamilyAuthScreen>
                     child: TabBar(
                       controller: _tabController,
                       indicator: BoxDecoration(
-                        color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8)),
                       indicatorSize: TabBarIndicatorSize.tab,
                       dividerColor: Colors.transparent,
                       labelColor: AppTheme.primary,
                       unselectedLabelColor: Colors.white,
-                      labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                      unselectedLabelStyle: const TextStyle(fontSize: 13),
+                      labelStyle: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                      unselectedLabelStyle:
+                          const TextStyle(fontSize: 13),
                       tabs: [
                         Tab(text: s.signUp),
                         Tab(text: s.signIn),
@@ -112,7 +126,9 @@ class _FamilyAuthScreenState extends State<FamilyAuthScreen>
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
             decoration: const BoxDecoration(
               color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFEEEEEE), width: 0.5)),
+              border: Border(
+                  top: BorderSide(
+                      color: Color(0xFFEEEEEE), width: 0.5)),
             ),
             child: Builder(builder: (context) {
               final s2 = LanguageProvider.strings(context);
@@ -123,10 +139,14 @@ class _FamilyAuthScreenState extends State<FamilyAuthScreen>
                   label: Text(s2.browseWithoutAccount),
                   onPressed: () => Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (_) => const FamilyHomeScreen(isGuest: true)),
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const FamilyHomeScreen(isGuest: true)),
                     (r) => false,
                   ),
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                  style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12)),
                 ),
               );
             }),
@@ -137,8 +157,10 @@ class _FamilyAuthScreenState extends State<FamilyAuthScreen>
   }
 }
 
+// ── Sign Up Tab ───────────────────────────────────────────────────────────────
 class _SignUpTab extends StatefulWidget {
   const _SignUpTab();
+
   @override
   State<_SignUpTab> createState() => _SignUpTabState();
 }
@@ -152,29 +174,63 @@ class _SignUpTabState extends State<_SignUpTab> {
   bool _showPw = false;
   bool _showConfirm = false;
   bool _isLoading = false;
+  String? _errorMessage;
 
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty &&
-      _phoneController.text.length == 10 &&
+      _phoneController.text.length == 9 &&
       _passwordController.text.length >= 6 &&
       _passwordController.text == _confirmController.text;
 
   @override
   void dispose() {
-    _nameController.dispose(); _phoneController.dispose();
-    _passwordController.dispose(); _confirmController.dispose();
+    _nameController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
   void _signUp() async {
-    _authService.currentUser;
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.pushAndRemoveUntil(
-        context, MaterialPageRoute(builder: (_) => const FamilyHomeScreen(isGuest: false)), (r) => false);
-    }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    // Format phone for Firebase: 0912345678 → +251912345678
+    final phone = _phoneController.text;
+    final formattedPhone = '+251$phone';
+
+    await _authService.sendPhoneOtp(
+      phoneNumber: formattedPhone,
+      onCodeSent: (verificationId) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OtpScreen(
+                phoneNumber: phone,
+                verificationId: verificationId,
+                password: _passwordController.text,
+                fullName: _nameController.text.trim(),
+                isHousekeeper: false,
+                onSuccess: () =>
+                    const FamilyHomeScreen(isGuest: false),
+              ),
+            ),
+          );
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = error;
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -191,24 +247,65 @@ class _SignUpTabState extends State<_SignUpTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 4),
+
+          // Error
+          if (_errorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.redLight,
+                borderRadius: BorderRadius.circular(8),
+                border:
+                    Border.all(color: AppTheme.red.withOpacity(0.3)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.error_outline,
+                    size: 16, color: AppTheme.red),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text(_errorMessage!,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.red))),
+              ]),
+            ),
+            const SizedBox(height: 14),
+          ],
+
           SectionLabel(s.fullName),
           TextFormField(
             controller: _nameController,
             onChanged: (_) => setState(() {}),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\u1200-\u137F]'))],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                  RegExp(r'[a-zA-Z\s\u1200-\u137F]'))
+            ],
             decoration: InputDecoration(hintText: s.fullNameHint),
           ),
           const SizedBox(height: 14),
+
           SectionLabel(s.phoneNumber),
           TextFormField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
-            maxLength: 10,
+            maxLength: 9,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(hintText: s.phoneHint, counterText: ''),
+            decoration: InputDecoration(
+              hintText: '912 345 678',
+              counterText: '',
+              prefixIcon: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                child: const Text('+251',
+                    style: TextStyle(fontSize: 14, color: AppTheme.grey800, fontWeight: FontWeight.w500)),
+              ),
+            ),
           ),
+          const SizedBox(height: 4),
+          const Text('This is your login ID — remember it.',
+              style:
+                  TextStyle(fontSize: 11, color: AppTheme.grey400)),
           const SizedBox(height: 14),
+
           SectionLabel(s.password),
           TextFormField(
             controller: _passwordController,
@@ -217,13 +314,19 @@ class _SignUpTabState extends State<_SignUpTab> {
             decoration: InputDecoration(
               hintText: s.password,
               suffixIcon: IconButton(
-                icon: Icon(_showPw ? Icons.visibility_off : Icons.visibility,
-                    size: 18, color: AppTheme.grey400),
-                onPressed: () => setState(() => _showPw = !_showPw),
+                icon: Icon(
+                    _showPw
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    size: 18,
+                    color: AppTheme.grey400),
+                onPressed: () =>
+                    setState(() => _showPw = !_showPw),
               ),
             ),
           ),
           const SizedBox(height: 14),
+
           SectionLabel(s.confirmPassword),
           TextFormField(
             controller: _confirmController,
@@ -232,38 +335,61 @@ class _SignUpTabState extends State<_SignUpTab> {
             decoration: InputDecoration(
               hintText: s.confirmPassword,
               suffixIcon: IconButton(
-                icon: Icon(_showConfirm ? Icons.visibility_off : Icons.visibility,
-                    size: 18, color: AppTheme.grey400),
-                onPressed: () => setState(() => _showConfirm = !_showConfirm),
+                icon: Icon(
+                    _showConfirm
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    size: 18,
+                    color: AppTheme.grey400),
+                onPressed: () =>
+                    setState(() => _showConfirm = !_showConfirm),
               ),
             ),
           ),
           const SizedBox(height: 6),
-          if (pwMatch) Row(children: [
-            const Icon(Icons.check_circle, size: 13, color: AppTheme.primary),
-            const SizedBox(width: 4),
-            Text(s.passwordsMatch, style: const TextStyle(fontSize: 11, color: AppTheme.primary)),
-          ]),
-          if (pwMismatch) Row(children: [
-            const Icon(Icons.cancel, size: 13, color: AppTheme.red),
-            const SizedBox(width: 4),
-            Text(s.passwordsMismatch, style: const TextStyle(fontSize: 11, color: AppTheme.red)),
-          ]),
+          if (pwMatch)
+            Row(children: [
+              const Icon(Icons.check_circle,
+                  size: 13, color: AppTheme.primary),
+              const SizedBox(width: 4),
+              Text(s.passwordsMatch,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppTheme.primary)),
+            ]),
+          if (pwMismatch)
+            Row(children: [
+              const Icon(Icons.cancel,
+                  size: 13, color: AppTheme.red),
+              const SizedBox(width: 4),
+              Text(s.passwordsMismatch,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppTheme.red)),
+            ]),
           const SizedBox(height: 20),
+
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.primaryLight, borderRadius: BorderRadius.circular(10)),
+                color: AppTheme.primaryLight,
+                borderRadius: BorderRadius.circular(10)),
             child: Column(children: [
-              _Benefit(icon: Icons.favorite_border, text: s.benefit1),
+              _Benefit(
+                  icon: Icons.favorite_border, text: s.benefit1),
               const SizedBox(height: 8),
               _Benefit(icon: Icons.history, text: s.benefit2),
               const SizedBox(height: 8),
-              _Benefit(icon: Icons.notifications_outlined, text: s.benefit3),
+              _Benefit(
+                  icon: Icons.notifications_outlined,
+                  text: s.benefit3),
             ]),
           ),
           const SizedBox(height: 20),
-          PrimaryButton(label: s.createAccount, onPressed: _isValid ? _signUp : null, isLoading: _isLoading),
+
+          PrimaryButton(
+            label: s.createAccount,
+            onPressed: _isValid ? _signUp : null,
+            isLoading: _isLoading,
+          ),
           const SizedBox(height: 16),
         ],
       ),
@@ -271,8 +397,10 @@ class _SignUpTabState extends State<_SignUpTab> {
   }
 }
 
+// ── Sign In Tab ───────────────────────────────────────────────────────────────
 class _SignInTab extends StatefulWidget {
   const _SignInTab();
+
   @override
   State<_SignInTab> createState() => _SignInTabState();
 }
@@ -283,6 +411,7 @@ class _SignInTabState extends State<_SignInTab> {
   final _passwordController = TextEditingController();
   bool _showPw = false;
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -292,14 +421,35 @@ class _SignInTabState extends State<_SignInTab> {
   }
 
   void _signIn() async {
-    _authService.currentUser;
-    if (_phoneController.text.length < 10 || _passwordController.text.isEmpty) return;
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.pushAndRemoveUntil(
-        context, MaterialPageRoute(builder: (_) => const FamilyHomeScreen(isGuest: false)), (r) => false);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final fakeEmail =
+          _authService.phoneToEmail(_phoneController.text);
+      await _authService.signInWithEmail(
+        email: fakeEmail,
+        password: _passwordController.text,
+      );
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+              builder: (_) =>
+                  const FamilyHomeScreen(isGuest: false)),
+          (r) => false,
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage =
+            'Phone number or password is incorrect. Please try again.';
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -312,16 +462,49 @@ class _SignInTabState extends State<_SignInTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 4),
+
+          // Error
+          if (_errorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.redLight,
+                borderRadius: BorderRadius.circular(8),
+                border:
+                    Border.all(color: AppTheme.red.withOpacity(0.3)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.error_outline,
+                    size: 16, color: AppTheme.red),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text(_errorMessage!,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.red))),
+              ]),
+            ),
+            const SizedBox(height: 14),
+          ],
+
           SectionLabel(s.phoneNumber),
           TextFormField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
-            maxLength: 10,
+            maxLength: 9,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(hintText: s.phoneHint, counterText: ''),
+            decoration: InputDecoration(
+              hintText: '912 345 678',
+              counterText: '',
+              prefixIcon: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                child: const Text('+251',
+                    style: TextStyle(fontSize: 14, color: AppTheme.grey800, fontWeight: FontWeight.w500)),
+              ),
+            ),
           ),
           const SizedBox(height: 14),
+
           SectionLabel(s.password),
           TextFormField(
             controller: _passwordController,
@@ -330,9 +513,14 @@ class _SignInTabState extends State<_SignInTab> {
             decoration: InputDecoration(
               hintText: s.password,
               suffixIcon: IconButton(
-                icon: Icon(_showPw ? Icons.visibility_off : Icons.visibility,
-                    size: 18, color: AppTheme.grey400),
-                onPressed: () => setState(() => _showPw = !_showPw),
+                icon: Icon(
+                    _showPw
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    size: 18,
+                    color: AppTheme.grey400),
+                onPressed: () =>
+                    setState(() => _showPw = !_showPw),
               ),
             ),
           ),
@@ -341,19 +529,27 @@ class _SignInTabState extends State<_SignInTab> {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {},
-              style: TextButton.styleFrom(foregroundColor: AppTheme.primary, padding: EdgeInsets.zero),
+              style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primary,
+                  padding: EdgeInsets.zero),
               child: Text(s.forgotPassword,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500)),
             ),
           ),
           const SizedBox(height: 10),
+
           PrimaryButton(
             label: s.signInBtn,
-            onPressed: _phoneController.text.length == 10 && _passwordController.text.isNotEmpty
-                ? _signIn : null,
+            onPressed: _phoneController.text.length == 9 &&
+                    _passwordController.text.isNotEmpty
+                ? _signIn
+                : null,
             isLoading: _isLoading,
           ),
           const SizedBox(height: 20),
+
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -361,16 +557,23 @@ class _SignInTabState extends State<_SignInTab> {
               border: Border.all(color: AppTheme.grey200, width: 0.5),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.whenSignedIn,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.grey800)),
-              const SizedBox(height: 8),
-              _Benefit(icon: Icons.favorite_border, text: s.benefit4),
-              const SizedBox(height: 6),
-              _Benefit(icon: Icons.history, text: s.benefit5),
-              const SizedBox(height: 6),
-              _Benefit(icon: Icons.message_outlined, text: s.benefit6),
-            ]),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.whenSignedIn,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.grey800)),
+                  const SizedBox(height: 8),
+                  _Benefit(
+                      icon: Icons.favorite_border, text: s.benefit4),
+                  const SizedBox(height: 6),
+                  _Benefit(icon: Icons.history, text: s.benefit5),
+                  const SizedBox(height: 6),
+                  _Benefit(
+                      icon: Icons.message_outlined, text: s.benefit6),
+                ]),
           ),
           const SizedBox(height: 16),
         ],
@@ -389,8 +592,11 @@ class _Benefit extends StatelessWidget {
     return Row(children: [
       Icon(icon, size: 14, color: AppTheme.primary),
       const SizedBox(width: 8),
-      Expanded(child: Text(text,
-          style: const TextStyle(fontSize: 12, color: AppTheme.primaryText))),
+      Expanded(
+          child: Text(text,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.primaryText))),
     ]);
   }
 }
