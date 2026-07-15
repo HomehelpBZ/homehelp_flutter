@@ -470,5 +470,13 @@ class AppStrings {
   String get guestPostJobSubtitle => isAmharic
       ? 'ሥራ መለጠፍ ነጻ ነው። መለያ መፍጠር 30 ሰከንድ ብቻ ይወስዳል።'
       : 'Posting a job is free. Creating an account takes just 30 seconds.';
-
+// ── Guarantor ─────────────────────────────────────────────────────────────
+  String get stepGuarantor => isAmharic ? 'ተያዥ (Guarantor)' : 'Guarantor (ተያዥ)';
+  String get guarantorNote => isAmharic
+      ? 'ተያዥዎ በአድሚን ስልክ ይረጋገጣል። ስሙ እና ስልኩ ትክክለኛ መሆን አለበት።'
+      : 'Your guarantor will be contacted by admin via phone call to verify. Make sure the name and phone number are correct.';
+  String get guarantorName => isAmharic ? 'የተያዥ ሙሉ ስም *' : 'Guarantor full name *';
+  String get guarantorNameHint => isAmharic ? 'ለምሳሌ አበበ ከበደ' : 'e.g. Abebe Kebede';
+  String get guarantorPhone => isAmharic ? 'የተያዥ ስልክ ቁጥር *' : 'Guarantor phone number *';
+  String get guarantorRelationship => isAmharic ? 'ከእርስዎ ጋር ያለው ግንኙነት *' : 'Relationship to you *';
 }

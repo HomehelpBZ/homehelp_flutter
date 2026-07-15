@@ -1,3 +1,4 @@
+import 'step6_guarantor.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
@@ -156,7 +157,10 @@ class _Step5IdVerifyState extends State<Step5IdVerify> {
                   const SizedBox(height: 24),
                   PrimaryButton(
                     label: s.submitProfile,
-                    onPressed: _isValid ? () => setState(() => _submitted = true) : null,
+                   onPressed: _isValid
+    ? () => Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const Step6Guarantor()))
+    : null,
                   ),
                   const SizedBox(height: 10),
                   SecondaryButton(label: s.backBtn, onPressed: () => Navigator.pop(context)),
