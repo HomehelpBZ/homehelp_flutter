@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phoneNumber;
@@ -30,6 +31,7 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   final AuthService _authService = AuthService();
+  final UserService _userService = UserService();
   
   // Single text field approach — more reliable on web
   final _otpController = TextEditingController();
@@ -83,12 +85,40 @@ class _OtpScreenState extends State<OtpScreen> {
     });
 
     try {
-      await _authService.verifyOtpAndSignUp(
+      // Step 1: Verify OTP and create Firebase Auth account
+      final result = await _authService.verifyOtpAndSignUp(
         verificationId: _currentVerificationId,
         smsCode: _otpController.text,
         phone: widget.phoneNumber,
         password: widget.password,
       );
+
+      final uid = result.user?.uid;
+
+      if (uid != null) {
+        // Step 2: Save user document to Firestore
+        await _userService.createUserDocument(
+          uid: uid,
+          phone: widget.phoneNumber,
+          fullName: widget.fullName,
+          role: widget.isHousekeeper ? 'housekeeper' : 'family',
+        );
+
+        // Step 3: Create role-specific profile
+        if (widget.isHousekeeper) {
+          await _userService.createHousekeeperProfile(
+            uid: uid,
+            phone: widget.phoneNumber,
+            fullName: widget.fullName,
+          );
+        } else {
+          await _userService.createFamilyProfile(
+            uid: uid,
+            fullName: widget.fullName,
+            phone: widget.phoneNumber,
+          );
+        }
+      }
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
