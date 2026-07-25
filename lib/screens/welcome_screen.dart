@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../l10n/language_provider.dart';
-import 'housekeeper/hk_signup_screen.dart';
+import 'housekeeper/hk_auth_screen.dart';
 import '../screens/family/family_auth_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -20,14 +20,11 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Language toggle top-right
                 Align(
                   alignment: Alignment.topRight,
                   child: const LangToggleFull(),
                 ),
                 const Spacer(),
-
-                // Logo
                 Container(
                   width: 72, height: 72,
                   decoration: BoxDecoration(
@@ -37,7 +34,6 @@ class WelcomeScreen extends StatelessWidget {
                   child: const Icon(Icons.home_outlined, size: 38, color: Colors.white),
                 ),
                 const SizedBox(height: 18),
-
                 Text(s.welcomeAppName,
                     style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 6),
@@ -54,9 +50,7 @@ class WelcomeScreen extends StatelessWidget {
                         style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12)),
                   ],
                 ),
-
                 const Spacer(),
-
                 _PathCard(
                   icon: Icons.search,
                   title: s.welcomeHireTitle,
@@ -70,9 +64,8 @@ class WelcomeScreen extends StatelessWidget {
                   title: s.welcomeHkTitle,
                   subtitle: s.welcomeHkSubtitle,
                   onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const HkSignupScreen())),
+                      MaterialPageRoute(builder: (_) => const HkAuthScreen())),
                 ),
-
                 const SizedBox(height: 28),
                 Text(s.welcomeFooter,
                     style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11),
@@ -92,7 +85,6 @@ class _PathCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-
   const _PathCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
 
   @override
@@ -110,7 +102,8 @@ class _PathCard extends StatelessWidget {
           children: [
             Container(
               width: 46, height: 46,
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18), shape: BoxShape.circle),
               child: Icon(icon, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
@@ -119,13 +112,17 @@ class _PathCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11)),
+                  Text(subtitle,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.65), fontSize: 11)),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.5), size: 20),
+            Icon(Icons.chevron_right,
+                color: Colors.white.withOpacity(0.5), size: 20),
           ],
         ),
       ),

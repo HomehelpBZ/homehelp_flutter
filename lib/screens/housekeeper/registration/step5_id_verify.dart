@@ -1,11 +1,12 @@
-import 'step6_guarantor.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:typed_data';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/shared_widgets.dart';
 import '../../../l10n/language_provider.dart';
-import '../hk_dashboard_screen.dart';
+import '../../../services/user_service.dart';
+import 'step6_guarantor.dart';
 
 class Step5IdVerify extends StatefulWidget {
   const Step5IdVerify({super.key});
@@ -19,7 +20,8 @@ class _Step5IdVerifyState extends State<Step5IdVerify> {
   Uint8List? _frontBytes;
   Uint8List? _backBytes;
   Uint8List? _selfieBytes;
-  bool _submitted = false;
+  final UserService _userService = UserService();
+  bool _isSaving = false;
 
   bool get _isValid =>
       _faydaController.text.trim().isNotEmpty &&
@@ -48,8 +50,6 @@ class _Step5IdVerifyState extends State<Step5IdVerify> {
   @override
   Widget build(BuildContext context) {
     final s = LanguageProvider.strings(context);
-    if (_submitted) return _SubmittedScreen(s: s);
-
     return Scaffold(
       body: Column(
         children: [
@@ -76,11 +76,11 @@ class _Step5IdVerifyState extends State<Step5IdVerify> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  StepProgressBar(currentStep: 5, totalSteps: 5),
+                  StepProgressBar(currentStep: 5, totalSteps: 6),
                   const SizedBox(height: 10),
                   Text(s.verifyIdentity,
                       style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                  Text(s.stepLabel(5, 5),
+                  Text(s.stepLabel(5, 6),
                       style: const TextStyle(color: Color(0xAAFFFFFF), fontSize: 12)),
                 ],
               ),
@@ -156,11 +156,32 @@ class _Step5IdVerifyState extends State<Step5IdVerify> {
                   ),
                   const SizedBox(height: 24),
                   PrimaryButton(
-                    label: s.submitProfile,
-                   onPressed: _isValid
-    ? () => Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const Step6Guarantor()))
-    : null,
+                    label: s.continueBtn,
+                    isLoading: _isSaving,
+                    onPressed: _isValid && !_isSaving
+                        ? () async {
+                            setState(() => _isSaving = true);
+                            try {
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                // Note: In production, upload images to Firebase Storage
+                                // and save the download URLs. For MVP, save Fayda ID only.
+                                await _userService.saveHkDocuments(
+                                  uid: uid,
+                                  faydaId: _faydaController.text.trim(),
+                                );
+                              }
+                            } catch (e) {
+                              // Continue even if save fails
+                            } finally {
+                              if (mounted) setState(() => _isSaving = false);
+                            }
+                            if (mounted) {
+                              Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const Step6Guarantor()));
+                            }
+                          }
+                        : null,
                   ),
                   const SizedBox(height: 10),
                   SecondaryButton(label: s.backBtn, onPressed: () => Navigator.pop(context)),
@@ -181,7 +202,6 @@ class _UploadBox extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-
   const _UploadBox({required this.bytes, required this.icon,
       required this.title, required this.subtitle, required this.onTap});
 
@@ -232,79 +252,6 @@ class _UploadBox extends StatelessWidget {
                   ],
                 ),
               ),
-      ),
-    );
-  }
-}
-
-class _SubmittedScreen extends StatelessWidget {
-  final dynamic s;
-  const _SubmittedScreen({required this.s});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 68, height: 68,
-                decoration: BoxDecoration(color: AppTheme.primaryLight, shape: BoxShape.circle),
-                child: const Icon(Icons.check, size: 34, color: AppTheme.primary),
-              ),
-              const SizedBox(height: 18),
-              Text(s.profileSubmitted,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: AppTheme.grey800),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text(s.submittedNote,
-                  style: const TextStyle(fontSize: 13, color: AppTheme.grey600, height: 1.6),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 22),
-              ...[
-                (Icons.check, 'Profile created', 'All details saved', true),
-                (Icons.check, 'ID uploaded', 'Documents received', true),
-                (Icons.access_time, 'Verification in progress', 'Usually 1–2 business days', false),
-                (Icons.visibility_outlined, 'Visible to families', 'After approval', false),
-              ].map((step) => Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(children: [
-                      Container(
-                        width: 26, height: 26,
-                        decoration: BoxDecoration(
-                          color: step.$4 ? AppTheme.primaryLight : AppTheme.amberLight,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(step.$1, size: 13,
-                            color: step.$4 ? AppTheme.primary : AppTheme.amber),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(step.$2, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.grey800)),
-                        Text(step.$3, style: const TextStyle(fontSize: 11, color: AppTheme.grey600)),
-                      ]),
-                    ]),
-                  )),
-              const SizedBox(height: 16),
-              PrimaryButton(
-                label: s.goToDashboard,
-                onPressed: () => Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HkDashboardScreen()),
-                  (r) => false,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

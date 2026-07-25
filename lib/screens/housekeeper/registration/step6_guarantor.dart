@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/shared_widgets.dart';
 import '../../../l10n/language_provider.dart';
+import '../../../services/user_service.dart';
 import '../hk_dashboard_screen.dart';
 
 class Step6Guarantor extends StatefulWidget {
@@ -17,6 +19,8 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
   final _phoneController = TextEditingController();
   String? _relationship;
   bool _submitted = false;
+  bool _isSaving = false;
+  final UserService _userService = UserService();
 
   static const relationships = [
     'Family member / የቤተሰብ አባል',
@@ -42,7 +46,6 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
   @override
   Widget build(BuildContext context) {
     final s = LanguageProvider.strings(context);
-
     if (_submitted) return _SubmittedScreen(s: s);
 
     return Scaffold(
@@ -62,13 +65,9 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Row(children: const [
-                          Icon(Icons.arrow_back,
-                              color: Colors.white70, size: 18),
+                          Icon(Icons.arrow_back, color: Colors.white70, size: 18),
                           SizedBox(width: 4),
-                          Text('Back',
-                              style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13)),
+                          Text('Back', style: TextStyle(color: Colors.white70, fontSize: 13)),
                         ]),
                       ),
                       const LangToggleButton(),
@@ -78,13 +77,9 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
                   StepProgressBar(currentStep: 6, totalSteps: 6),
                   const SizedBox(height: 10),
                   Text(s.stepGuarantor,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500)),
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
                   Text(s.stepLabel(6, 6),
-                      style: const TextStyle(
-                          color: Color(0xAAFFFFFF), fontSize: 12)),
+                      style: const TextStyle(color: Color(0xAAFFFFFF), fontSize: 12)),
                 ],
               ),
             ),
@@ -95,7 +90,6 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Info card
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -105,78 +99,57 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.shield_outlined,
-                            size: 15, color: AppTheme.amber),
+                        const Icon(Icons.shield_outlined, size: 15, color: AppTheme.amber),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(s.guarantorNote,
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF633806),
-                                  height: 1.5)),
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF633806), height: 1.5)),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // Full name
                   SectionLabel(s.guarantorName),
                   TextFormField(
                     controller: _nameController,
                     onChanged: (_) => setState(() {}),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'[a-zA-Z\s\u1200-\u137F]'))
+                      FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\u1200-\u137F]'))
                     ],
-                    decoration: InputDecoration(
-                        hintText: s.guarantorNameHint),
+                    decoration: InputDecoration(hintText: s.guarantorNameHint),
                   ),
                   const SizedBox(height: 14),
 
-                  // Phone number
                   SectionLabel(s.guarantorPhone),
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     maxLength: 9,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       hintText: '912 345 678',
                       counterText: '',
                       prefixIcon: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         child: const Text('+251',
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.grey800,
-                                fontWeight: FontWeight.w500)),
+                            style: TextStyle(fontSize: 14, color: AppTheme.grey800, fontWeight: FontWeight.w500)),
                       ),
                     ),
                   ),
                   const SizedBox(height: 14),
 
-                  // Relationship
                   SectionLabel(s.guarantorRelationship),
                   ...relationships.map((r) => GestureDetector(
-                        onTap: () =>
-                            setState(() => _relationship = r),
+                        onTap: () => setState(() => _relationship = r),
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
-                            color: _relationship == r
-                                ? AppTheme.primaryLight
-                                : Colors.white,
+                            color: _relationship == r ? AppTheme.primaryLight : Colors.white,
                             border: Border.all(
-                              color: _relationship == r
-                                  ? AppTheme.primary
-                                  : AppTheme.grey200,
+                              color: _relationship == r ? AppTheme.primary : AppTheme.grey200,
                               width: 0.5,
                             ),
                             borderRadius: BorderRadius.circular(8),
@@ -185,18 +158,13 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
                             Radio<String>(
                               value: r,
                               groupValue: _relationship,
-                              onChanged: (v) =>
-                                  setState(() => _relationship = v),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
+                              onChanged: (v) => setState(() => _relationship = v),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               visualDensity: VisualDensity.compact,
                             ),
                             const SizedBox(width: 8),
-                            Expanded(
-                                child: Text(r,
-                                    style: const TextStyle(
-                                        fontSize: 13,
-                                        color: AppTheme.grey800))),
+                            Expanded(child: Text(r,
+                                style: const TextStyle(fontSize: 13, color: AppTheme.grey800))),
                           ]),
                         ),
                       )),
@@ -204,14 +172,36 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
 
                   PrimaryButton(
                     label: s.submitProfile,
-                    onPressed: _isValid
-                        ? () => setState(() => _submitted = true)
+                    isLoading: _isSaving,
+                    onPressed: _isValid && !_isSaving
+                        ? () async {
+                            setState(() => _isSaving = true);
+                            try {
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                // Save guarantor to Firestore
+                                await _userService.saveGuarantor(
+                                  uid: uid,
+                                  fullName: _nameController.text.trim(),
+                                  phone: _phoneController.text,
+                                  relationship: _relationship!,
+                                );
+                                // Add to verification queue
+                                await _userService.addToVerificationQueue(uid: uid);
+                              }
+                            } catch (e) {
+                              // Continue even if save fails
+                            } finally {
+                              if (mounted) setState(() => _isSaving = false);
+                            }
+                            if (mounted) {
+                              setState(() => _submitted = true);
+                            }
+                          }
                         : null,
                   ),
                   const SizedBox(height: 10),
-                  SecondaryButton(
-                      label: s.backBtn,
-                      onPressed: () => Navigator.pop(context)),
+                  SecondaryButton(label: s.backBtn, onPressed: () => Navigator.pop(context)),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -223,7 +213,6 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
   }
 }
 
-// ── Submitted screen ──────────────────────────────────────────────────────────
 class _SubmittedScreen extends StatelessWidget {
   final dynamic s;
   const _SubmittedScreen({required this.s});
@@ -239,73 +228,46 @@ class _SubmittedScreen extends StatelessWidget {
             children: [
               Container(
                 width: 68, height: 68,
-                decoration: BoxDecoration(
-                    color: AppTheme.primaryLight,
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.check,
-                    size: 34, color: AppTheme.primary),
+                decoration: BoxDecoration(color: AppTheme.primaryLight, shape: BoxShape.circle),
+                child: const Icon(Icons.check, size: 34, color: AppTheme.primary),
               ),
               const SizedBox(height: 18),
               Text(s.profileSubmitted,
-                  style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.grey800),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: AppTheme.grey800),
                   textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(s.submittedNote,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.grey600,
-                      height: 1.6),
+                  style: const TextStyle(fontSize: 13, color: AppTheme.grey600, height: 1.6),
                   textAlign: TextAlign.center),
               const SizedBox(height: 22),
               ...[
                 (Icons.check, 'Profile created', 'All details saved', true),
                 (Icons.check, 'ID uploaded', 'Documents received', true),
-                (Icons.people_outline, 'Guarantor added',
-                    'Admin will verify by phone call', true),
-                (Icons.access_time, 'Verification in progress',
-                    'Usually 1–2 business days', false),
-                (Icons.visibility_outlined, 'Visible to families',
-                    'After approval', false),
+                (Icons.people_outline, 'Guarantor added', 'Admin will verify by phone call', true),
+                (Icons.access_time, 'Verification in progress', 'Usually 1–2 business days', false),
+                (Icons.visibility_outlined, 'Visible to families', 'After approval', false),
               ].map((step) => Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      border: Border.all(
-                          color: const Color(0xFFEEEEEE), width: 0.5),
+                      border: Border.all(color: const Color(0xFFEEEEEE), width: 0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(children: [
                       Container(
                         width: 26, height: 26,
                         decoration: BoxDecoration(
-                          color: step.$4
-                              ? AppTheme.primaryLight
-                              : AppTheme.amberLight,
+                          color: step.$4 ? AppTheme.primaryLight : AppTheme.amberLight,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(step.$1,
-                            size: 13,
-                            color: step.$4
-                                ? AppTheme.primary
-                                : AppTheme.amber),
+                        child: Icon(step.$1, size: 13,
+                            color: step.$4 ? AppTheme.primary : AppTheme.amber),
                       ),
                       const SizedBox(width: 12),
-                      Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(step.$2,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.grey800)),
-                            Text(step.$3,
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppTheme.grey600)),
-                          ]),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(step.$2, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.grey800)),
+                        Text(step.$3, style: const TextStyle(fontSize: 11, color: AppTheme.grey600)),
+                      ]),
                     ]),
                   )),
               const SizedBox(height: 16),
@@ -313,8 +275,7 @@ class _SubmittedScreen extends StatelessWidget {
                 label: s.goToDashboard,
                 onPressed: () => Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const HkDashboardScreen()),
+                  MaterialPageRoute(builder: (_) => const HkDashboardScreen()),
                   (r) => false,
                 ),
               ),

@@ -6,6 +6,8 @@ import '../../../theme/app_theme.dart';
 import '../../../widgets/shared_widgets.dart';
 import '../../../l10n/language_provider.dart';
 import 'step2_background.dart';
+import '../../../services/user_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Step1Personal extends StatefulWidget {
   final String? fullName;
@@ -25,6 +27,8 @@ class _Step1PersonalState extends State<Step1Personal> {
   String? _selectedRegion;
   String? _selectedAge;
   String? _selectedGender;
+  final UserService _userService = UserService();
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -310,12 +314,33 @@ class _Step1PersonalState extends State<Step1Personal> {
 
                   PrimaryButton(
                     label: s.continueBtn,
-                    onPressed: _isValid
-                        ? () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    const Step2Background()))
+                    isLoading: _isSaving,
+                    onPressed: _isValid && !_isSaving
+                        ? () async {
+                            setState(() => _isSaving = true);
+                            try {
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                await _userService.updateHkStep1(
+                                  uid: uid,
+                                  fullName: _nameController.text.trim(),
+                                  phone: _phoneController.text,
+                                  region: _selectedRegion!,
+                                  ageRange: _selectedAge!,
+                                  gender: _selectedGender!,
+                                  photoUrl: null,
+                                );
+                              }
+                            } catch (e) {
+                              // Continue even if save fails
+                            } finally {
+                              if (mounted) setState(() => _isSaving = false);
+                            }
+                            if (mounted) {
+                              Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const Step2Background()));
+                            }
+                          }
                         : null,
                   ),
                   const SizedBox(height: 16),

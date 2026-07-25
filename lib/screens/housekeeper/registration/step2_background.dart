@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../theme/app_theme.dart';
 import '../../../l10n/language_provider.dart';
 import '../../../widgets/shared_widgets.dart';
+import '../../../services/user_service.dart';
 import 'step3_skills.dart';
 
 class Step2Background extends StatefulWidget {
@@ -15,6 +17,8 @@ class _Step2BackgroundState extends State<Step2Background> {
   String? _education;
   String? _experience;
   final _historyController = TextEditingController();
+  final UserService _userService = UserService();
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -51,11 +55,11 @@ class _Step2BackgroundState extends State<Step2Background> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  StepProgressBar(currentStep: 2, totalSteps: 5),
+                  StepProgressBar(currentStep: 2, totalSteps: 6),
                   const SizedBox(height: 10),
                   Text(s.stepBackground,
                       style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                  Text(s.stepLabel(2, 5),
+                  Text(s.stepLabel(2, 6),
                       style: const TextStyle(color: Color(0xAAFFFFFF), fontSize: 12)),
                 ],
               ),
@@ -95,8 +99,33 @@ class _Step2BackgroundState extends State<Step2Background> {
                   const SizedBox(height: 24),
                   PrimaryButton(
                     label: s.continueBtn,
-                    onPressed: () => Navigator.push(
-                        context, MaterialPageRoute(builder: (_) => const Step3Skills())),
+                    isLoading: _isSaving,
+                    onPressed: _education != null && _experience != null && !_isSaving
+                        ? () async {
+                            setState(() => _isSaving = true);
+                            try {
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                await _userService.updateHkStep2(
+                                  uid: uid,
+                                  education: _education!,
+                                  experienceYears: _experience!,
+                                  workHistory: _historyController.text.trim().isEmpty
+                                      ? null
+                                      : _historyController.text.trim(),
+                                );
+                              }
+                            } catch (e) {
+                              // Continue even if save fails
+                            } finally {
+                              if (mounted) setState(() => _isSaving = false);
+                            }
+                            if (mounted) {
+                              Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const Step3Skills()));
+                            }
+                          }
+                        : null,
                   ),
                   const SizedBox(height: 10),
                   SecondaryButton(label: s.backBtn, onPressed: () => Navigator.pop(context)),
@@ -116,7 +145,6 @@ class _RadioTile extends StatelessWidget {
   final String? groupValue;
   final String value;
   final ValueChanged<String?> onChanged;
-
   const _RadioTile({required this.label, required this.groupValue,
       required this.value, required this.onChanged});
 

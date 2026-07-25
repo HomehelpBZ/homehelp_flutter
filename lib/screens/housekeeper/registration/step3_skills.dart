@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../theme/app_theme.dart';
 import '../../../l10n/language_provider.dart';
 import '../../../widgets/shared_widgets.dart';
+import '../../../services/user_service.dart';
 import 'step4_job_prefs.dart';
 
 class Step3Skills extends StatefulWidget {
@@ -16,6 +18,8 @@ class _Step3SkillsState extends State<Step3Skills> {
   final Set<int> _selectedLanguageIndexes = {};
   bool _showOtherLanguage = false;
   final _otherLangController = TextEditingController();
+  final UserService _userService = UserService();
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -55,11 +59,11 @@ class _Step3SkillsState extends State<Step3Skills> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  StepProgressBar(currentStep: 3, totalSteps: 5),
+                  StepProgressBar(currentStep: 3, totalSteps: 6),
                   const SizedBox(height: 10),
                   Text(s.stepSkills,
                       style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                  Text(s.stepLabel(3, 5),
+                  Text(s.stepLabel(3, 6),
                       style: const TextStyle(color: Color(0xAAFFFFFF), fontSize: 12)),
                 ],
               ),
@@ -119,8 +123,40 @@ class _Step3SkillsState extends State<Step3Skills> {
                   const SizedBox(height: 24),
                   PrimaryButton(
                     label: s.continueBtn,
-                    onPressed: () => Navigator.push(
-                        context, MaterialPageRoute(builder: (_) => const Step4JobPrefs())),
+                    isLoading: _isSaving,
+                    onPressed: !_isSaving
+                        ? () async {
+                            setState(() => _isSaving = true);
+                            try {
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                // Convert indexes to actual strings
+                                final selectedSkills = _selectedSkillIndexes
+                                    .map((i) => skillOptions[i])
+                                    .toList();
+                                final selectedLangs = _selectedLanguageIndexes
+                                    .map((i) => languageOptions[i])
+                                    .toList();
+                                if (_showOtherLanguage && _otherLangController.text.isNotEmpty) {
+                                  selectedLangs.add(_otherLangController.text.trim());
+                                }
+                                await _userService.updateHkStep3(
+                                  uid: uid,
+                                  skills: selectedSkills,
+                                  languages: selectedLangs,
+                                );
+                              }
+                            } catch (e) {
+                              // Continue even if save fails
+                            } finally {
+                              if (mounted) setState(() => _isSaving = false);
+                            }
+                            if (mounted) {
+                              Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const Step4JobPrefs()));
+                            }
+                          }
+                        : null,
                   ),
                   const SizedBox(height: 10),
                   SecondaryButton(label: s.backBtn, onPressed: () => Navigator.pop(context)),
@@ -139,7 +175,6 @@ class _CheckTile extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-
   const _CheckTile({required this.label, required this.selected, required this.onTap});
 
   @override

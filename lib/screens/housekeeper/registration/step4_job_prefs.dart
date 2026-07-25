@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../theme/app_theme.dart';
 import '../../../l10n/language_provider.dart';
 import '../../../widgets/shared_widgets.dart';
+import '../../../services/user_service.dart';
 import 'step5_id_verify.dart';
 
 class Step4JobPrefs extends StatefulWidget {
@@ -13,10 +15,12 @@ class Step4JobPrefs extends StatefulWidget {
 
 class _Step4JobPrefsState extends State<Step4JobPrefs> {
   final Set<int> _jobTypeIndexes = {};
-  String? _arrangement; // 'livein', 'liveout', 'either'
+  String? _arrangement;
   final Map<int, bool> _days = {0:true,1:true,2:true,3:true,4:true,5:true,6:true};
   final Set<int> _areaIndexes = {};
   final _salaryController = TextEditingController();
+  final UserService _userService = UserService();
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -60,11 +64,11 @@ class _Step4JobPrefsState extends State<Step4JobPrefs> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  StepProgressBar(currentStep: 4, totalSteps: 5),
+                  StepProgressBar(currentStep: 4, totalSteps: 6),
                   const SizedBox(height: 10),
                   Text(s.stepJobPrefs,
                       style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                  Text(s.stepLabel(4, 5),
+                  Text(s.stepLabel(4, 6),
                       style: const TextStyle(color: Color(0xAAFFFFFF), fontSize: 12)),
                 ],
               ),
@@ -151,13 +155,54 @@ class _Step4JobPrefsState extends State<Step4JobPrefs> {
                   SectionLabel(s.expectedSalary),
                   TextFormField(
                     controller: _salaryController,
+                    keyboardType: TextInputType.number,
                     decoration: InputDecoration(hintText: s.salaryHint),
                   ),
                   const SizedBox(height: 24),
                   PrimaryButton(
                     label: s.continueBtn,
-                    onPressed: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const Step5IdVerify())),
+                    isLoading: _isSaving,
+                    onPressed: !_isSaving
+                        ? () async {
+                            setState(() => _isSaving = true);
+                            try {
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                final selectedJobTypes = _jobTypeIndexes
+                                    .map((i) => jobTypes[i])
+                                    .toList();
+                                final selectedAreas = _areaIndexes
+                                    .map((i) => areaOptions[i])
+                                    .toList();
+                                final workingDays = {
+                                  'mon': _days[0] ?? true,
+                                  'tue': _days[1] ?? true,
+                                  'wed': _days[2] ?? true,
+                                  'thu': _days[3] ?? true,
+                                  'fri': _days[4] ?? true,
+                                  'sat': _days[5] ?? false,
+                                  'sun': _days[6] ?? false,
+                                };
+                                await _userService.updateHkStep4(
+                                  uid: uid,
+                                  jobTypes: selectedJobTypes,
+                                  arrangement: _arrangement ?? 'liveout',
+                                  workingDays: workingDays,
+                                  preferredAreas: selectedAreas,
+                                  expectedSalary: _salaryController.text.trim(),
+                                );
+                              }
+                            } catch (e) {
+                              // Continue even if save fails
+                            } finally {
+                              if (mounted) setState(() => _isSaving = false);
+                            }
+                            if (mounted) {
+                              Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const Step5IdVerify()));
+                            }
+                          }
+                        : null,
                   ),
                   const SizedBox(height: 10),
                   SecondaryButton(label: s.backBtn, onPressed: () => Navigator.pop(context)),
