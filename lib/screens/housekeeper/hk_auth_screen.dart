@@ -1,148 +1,205 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/auth_service.dart';
-import '../../services/user_service.dart';
 import '../welcome_screen.dart';
 import '../shared/otp_screen.dart';
 import 'hk_dashboard_screen.dart';
 import 'forgot_password_screen.dart';
 import 'registration/step1_personal.dart';
 
-class HkAuthScreen extends StatefulWidget {
+// ── Landing screen ────────────────────────────────────────────────────────────
+class HkAuthScreen extends StatelessWidget {
   const HkAuthScreen({super.key});
-
-  @override
-  State<HkAuthScreen> createState() => _HkAuthScreenState();
-}
-
-class _HkAuthScreenState extends State<HkAuthScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final s = LanguageProvider.strings(context);
     return Scaffold(
-      body: Column(
-        children: [
-          // Navy header
-          Container(
-            color: AppTheme.primary,
-            padding: const EdgeInsets.fromLTRB(16, 48, 16, 0),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton.icon(
-                        icon: const Icon(Icons.arrow_back,
-                            color: Colors.white70, size: 16),
-                        label: Text(s.home,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13)),
-                        onPressed: () => Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const WelcomeScreen()),
-                          (r) => false,
-                        ),
-                        style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero),
+      body: Container(
+        width: double.infinity,
+        color: AppTheme.primary,
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Top bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.arrow_back,
+                          color: Colors.white70, size: 16),
+                      label: Text(s.home,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13)),
+                      onPressed: () => Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const WelcomeScreen()),
+                        (r) => false,
                       ),
-                      const LangToggleButton(),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 52, height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(14),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
                     ),
-                    child: const Icon(Icons.person_outline,
-                        size: 26, color: Colors.white),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(s.hkSignupTitle,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 3),
-                  Text(s.hkSignupSubtitle,
-                      style: const TextStyle(
-                          color: Color(0xAAFFFFFF), fontSize: 12),
-                      textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  // Tabs
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicator: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8)),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerColor: Colors.transparent,
-                      labelColor: AppTheme.primary,
-                      unselectedLabelColor: Colors.white,
-                      labelStyle: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500),
-                      unselectedLabelStyle:
-                          const TextStyle(fontSize: 13),
-                      tabs: [
-                        Tab(text: s.signUp),
-                        Tab(text: s.signIn),
-                      ],
-                    ),
-                  ),
-                ],
+                    const LangToggleButton(),
+                  ],
+                ),
               ),
-            ),
+
+              const Spacer(),
+
+              // Icon and title
+              Container(
+                width: 64, height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(Icons.person_outline,
+                    size: 32, color: Colors.white),
+              ),
+              const SizedBox(height: 14),
+              Text(s.hkSignupTitle,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
+              Text(s.hkSignupSubtitle,
+                  style: const TextStyle(
+                      color: Color(0xAAFFFFFF), fontSize: 13),
+                  textAlign: TextAlign.center),
+
+              const Spacer(),
+
+              // Action cards
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    // Create account — most prominent for HK
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const _HkSignUpScreen()),
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(children: [
+                          Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryLight,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.person_add_outlined,
+                                color: AppTheme.primary, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(s.createAccount,
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppTheme.grey800)),
+                                const SizedBox(height: 2),
+                                Text('Create your housekeeper profile',
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.grey600)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right,
+                              color: AppTheme.grey400, size: 20),
+                        ]),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Sign in
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const _HkSignInScreen()),
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.3)),
+                        ),
+                        child: Row(children: [
+                          Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.login,
+                                color: Colors.white, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(s.signInBtn,
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white)),
+                                const SizedBox(height: 2),
+                                Text('Already have an account',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.white.withOpacity(0.65))),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right,
+                              color: Colors.white.withOpacity(0.5), size: 20),
+                        ]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
           ),
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [_HkSignUpTab(), _HkSignInTab()],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-// ── Sign Up Tab ───────────────────────────────────────────────────────────────
-class _HkSignUpTab extends StatefulWidget {
-  const _HkSignUpTab();
+// ── Sign Up Screen ────────────────────────────────────────────────────────────
+class _HkSignUpScreen extends StatefulWidget {
+  const _HkSignUpScreen();
 
   @override
-  State<_HkSignUpTab> createState() => _HkSignUpTabState();
+  State<_HkSignUpScreen> createState() => _HkSignUpScreenState();
 }
 
-class _HkSignUpTabState extends State<_HkSignUpTab> {
+class _HkSignUpScreenState extends State<_HkSignUpScreen> {
   final AuthService _authService = AuthService();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -219,167 +276,241 @@ class _HkSignUpTabState extends State<_HkSignUpTab> {
     final pwMismatch = _confirmController.text.isNotEmpty &&
         _passwordController.text != _confirmController.text;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      body: Column(
         children: [
-          const SizedBox(height: 4),
-
-          // Error
-          if (_errorMessage != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.redLight,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.red.withOpacity(0.3)),
-              ),
-              child: Row(children: [
-                const Icon(Icons.error_outline, size: 16, color: AppTheme.red),
-                const SizedBox(width: 8),
-                Expanded(child: Text(_errorMessage!,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.red))),
-              ]),
-            ),
-            const SizedBox(height: 14),
-          ],
-
-          SectionLabel(s.fullName),
-          TextFormField(
-            controller: _nameController,
-            onChanged: (_) => setState(() {}),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(
-                  RegExp(r'[a-zA-Z\s\u1200-\u137F]'))
-            ],
-            decoration: InputDecoration(hintText: s.fullNameHint),
-          ),
-          const SizedBox(height: 14),
-
-          SectionLabel(s.phoneNumber),
-          TextFormField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            maxLength: 9,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: '912 345 678',
-              counterText: '',
-              prefixIcon: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 14),
-                child: const Text('+251',
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.grey800,
-                        fontWeight: FontWeight.w500)),
+          Container(
+            color: AppTheme.primary,
+            padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Row(children: const [
+                          Icon(Icons.arrow_back,
+                              color: Colors.white70, size: 18),
+                          SizedBox(width: 4),
+                          Text('Back',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 13)),
+                        ]),
+                      ),
+                      const LangToggleButton(),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(s.createAccount,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 3),
+                  Text('Create your housekeeper profile',
+                      style: const TextStyle(
+                          color: Color(0xAAFFFFFF), fontSize: 12)),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          const Text('This is your login ID — remember it.',
-              style: TextStyle(fontSize: 11, color: AppTheme.grey400)),
-          const SizedBox(height: 14),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
 
-          SectionLabel(s.password),
-          TextFormField(
-            controller: _passwordController,
-            obscureText: !_showPw,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: s.password,
-              suffixIcon: IconButton(
-                icon: Icon(
-                    _showPw ? Icons.visibility_off : Icons.visibility,
-                    size: 18, color: AppTheme.grey400),
-                onPressed: () => setState(() => _showPw = !_showPw),
+                  if (_errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.redLight,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: AppTheme.red.withOpacity(0.3)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.error_outline,
+                            size: 16, color: AppTheme.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text(_errorMessage!,
+                                style: const TextStyle(
+                                    fontSize: 12, color: AppTheme.red))),
+                      ]),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  SectionLabel(s.fullName),
+                  TextFormField(
+                    controller: _nameController,
+                    onChanged: (_) => setState(() {}),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-Z\s\u1200-\u137F]'))
+                    ],
+                    decoration:
+                        InputDecoration(hintText: s.fullNameHint),
+                  ),
+                  const SizedBox(height: 14),
+
+                  SectionLabel(s.phoneNumber),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 9,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ],
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: '912 345 678',
+                      counterText: '',
+                      prefixIcon: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14),
+                        child: const Text('+251',
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.grey800,
+                                fontWeight: FontWeight.w500)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('This is your login ID — remember it.',
+                      style: TextStyle(
+                          fontSize: 11, color: AppTheme.grey400)),
+                  const SizedBox(height: 14),
+
+                  SectionLabel(s.password),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: !_showPw,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: s.password,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                            _showPw
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 18,
+                            color: AppTheme.grey400),
+                        onPressed: () =>
+                            setState(() => _showPw = !_showPw),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Icon(
+                      _passwordController.text.isEmpty
+                          ? Icons.info_outline
+                          : _passwordController.text.length >= 8
+                              ? Icons.check_circle
+                              : Icons.cancel,
+                      size: 13,
+                      color: _passwordController.text.isEmpty
+                          ? AppTheme.grey400
+                          : _passwordController.text.length >= 8
+                              ? AppTheme.primary
+                              : AppTheme.red,
+                    ),
+                    const SizedBox(width: 4),
+                    Text('Minimum 8 characters',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _passwordController.text.isEmpty
+                              ? AppTheme.grey400
+                              : _passwordController.text.length >= 8
+                                  ? AppTheme.primary
+                                  : AppTheme.red,
+                        )),
+                  ]),
+                  const SizedBox(height: 14),
+
+                  SectionLabel(s.confirmPassword),
+                  TextFormField(
+                    controller: _confirmController,
+                    obscureText: !_showConfirm,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: s.confirmPassword,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                            _showConfirm
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 18,
+                            color: AppTheme.grey400),
+                        onPressed: () =>
+                            setState(() => _showConfirm = !_showConfirm),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (pwMatch)
+                    Row(children: [
+                      const Icon(Icons.check_circle,
+                          size: 13, color: AppTheme.primary),
+                      const SizedBox(width: 4),
+                      Text(s.passwordsMatch,
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.primary)),
+                    ]),
+                  if (pwMismatch)
+                    Row(children: [
+                      const Icon(Icons.cancel,
+                          size: 13, color: AppTheme.red),
+                      const SizedBox(width: 4),
+                      Text(s.passwordsMismatch,
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.red)),
+                    ]),
+                  const SizedBox(height: 24),
+
+                  PrimaryButton(
+                    label: s.createAccount,
+                    onPressed: _isValid ? _signUp : null,
+                    isLoading: _isLoading,
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(s.backBtn,
+                          style: const TextStyle(
+                              fontSize: 13, color: AppTheme.grey600)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          Row(children: [
-            Icon(
-              _passwordController.text.isEmpty
-                  ? Icons.info_outline
-                  : _passwordController.text.length >= 8
-                      ? Icons.check_circle
-                      : Icons.cancel,
-              size: 13,
-              color: _passwordController.text.isEmpty
-                  ? AppTheme.grey400
-                  : _passwordController.text.length >= 8
-                      ? AppTheme.primary
-                      : AppTheme.red,
-            ),
-            const SizedBox(width: 4),
-            Text('Minimum 8 characters',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: _passwordController.text.isEmpty
-                      ? AppTheme.grey400
-                      : _passwordController.text.length >= 8
-                          ? AppTheme.primary
-                          : AppTheme.red,
-                )),
-          ]),
-          const SizedBox(height: 14),
-
-          SectionLabel(s.confirmPassword),
-          TextFormField(
-            controller: _confirmController,
-            obscureText: !_showConfirm,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: s.confirmPassword,
-              suffixIcon: IconButton(
-                icon: Icon(
-                    _showConfirm ? Icons.visibility_off : Icons.visibility,
-                    size: 18, color: AppTheme.grey400),
-                onPressed: () =>
-                    setState(() => _showConfirm = !_showConfirm),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          if (pwMatch)
-            Row(children: [
-              const Icon(Icons.check_circle, size: 13, color: AppTheme.primary),
-              const SizedBox(width: 4),
-              Text(s.passwordsMatch,
-                  style: const TextStyle(fontSize: 11, color: AppTheme.primary)),
-            ]),
-          if (pwMismatch)
-            Row(children: [
-              const Icon(Icons.cancel, size: 13, color: AppTheme.red),
-              const SizedBox(width: 4),
-              Text(s.passwordsMismatch,
-                  style: const TextStyle(fontSize: 11, color: AppTheme.red)),
-            ]),
-          const SizedBox(height: 24),
-
-          PrimaryButton(
-            label: s.createAccount,
-            onPressed: _isValid ? _signUp : null,
-            isLoading: _isLoading,
-          ),
-          const SizedBox(height: 16),
         ],
       ),
     );
   }
 }
 
-// ── Sign In Tab ───────────────────────────────────────────────────────────────
-class _HkSignInTab extends StatefulWidget {
-  const _HkSignInTab();
+// ── Sign In Screen ────────────────────────────────────────────────────────────
+class _HkSignInScreen extends StatefulWidget {
+  const _HkSignInScreen();
 
   @override
-  State<_HkSignInTab> createState() => _HkSignInTabState();
+  State<_HkSignInScreen> createState() => _HkSignInScreenState();
 }
 
-class _HkSignInTabState extends State<_HkSignInTab> {
+class _HkSignInScreenState extends State<_HkSignInScreen> {
   final AuthService _authService = AuthService();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -429,96 +560,163 @@ class _HkSignInTabState extends State<_HkSignInTab> {
   @override
   Widget build(BuildContext context) {
     final s = LanguageProvider.strings(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      body: Column(
         children: [
-          const SizedBox(height: 4),
-
-          // Error
-          if (_errorMessage != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.redLight,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.red.withOpacity(0.3)),
-              ),
-              child: Row(children: [
-                const Icon(Icons.error_outline, size: 16, color: AppTheme.red),
-                const SizedBox(width: 8),
-                Expanded(child: Text(_errorMessage!,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.red))),
-              ]),
-            ),
-            const SizedBox(height: 14),
-          ],
-
-          SectionLabel(s.phoneNumber),
-          TextFormField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            maxLength: 9,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: '912 345 678',
-              counterText: '',
-              prefixIcon: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 14),
-                child: const Text('+251',
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.grey800,
-                        fontWeight: FontWeight.w500)),
+          Container(
+            color: AppTheme.primary,
+            padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Row(children: const [
+                          Icon(Icons.arrow_back,
+                              color: Colors.white70, size: 18),
+                          SizedBox(width: 4),
+                          Text('Back',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 13)),
+                        ]),
+                      ),
+                      const LangToggleButton(),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(s.signInBtn,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 3),
+                  Text('Welcome back to HomeHelp',
+                      style: const TextStyle(
+                          color: Color(0xAAFFFFFF), fontSize: 12)),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
 
-          SectionLabel(s.password),
-          TextFormField(
-            controller: _passwordController,
-            obscureText: !_showPw,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: s.password,
-              suffixIcon: IconButton(
-                icon: Icon(
-                    _showPw ? Icons.visibility_off : Icons.visibility,
-                    size: 18, color: AppTheme.grey400),
-                onPressed: () => setState(() => _showPw = !_showPw),
+                  if (_errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.redLight,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: AppTheme.red.withOpacity(0.3)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.error_outline,
+                            size: 16, color: AppTheme.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text(_errorMessage!,
+                                style: const TextStyle(
+                                    fontSize: 12, color: AppTheme.red))),
+                      ]),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  SectionLabel(s.phoneNumber),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 9,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ],
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: '912 345 678',
+                      counterText: '',
+                      prefixIcon: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14),
+                        child: const Text('+251',
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.grey800,
+                                fontWeight: FontWeight.w500)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  SectionLabel(s.password),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: !_showPw,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: s.password,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                            _showPw
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 18,
+                            color: AppTheme.grey400),
+                        onPressed: () =>
+                            setState(() => _showPw = !_showPw),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.push(context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const ForgotPasswordScreen())),
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primary,
+                          padding: EdgeInsets.zero),
+                      child: Text(s.forgotPassword,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  PrimaryButton(
+                    label: s.signInBtn,
+                    onPressed: _phoneController.text.length == 9 &&
+                            _passwordController.text.isNotEmpty
+                        ? _signIn
+                        : null,
+                    isLoading: _isLoading,
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(s.backBtn,
+                          style: const TextStyle(
+                              fontSize: 13, color: AppTheme.grey600)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(
-                      builder: (_) => const ForgotPasswordScreen())),
-              style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.primary,
-                  padding: EdgeInsets.zero),
-              child: Text(s.forgotPassword,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w500)),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          PrimaryButton(
-            label: s.signInBtn,
-            onPressed: _phoneController.text.length == 9 &&
-                    _passwordController.text.isNotEmpty
-                ? _signIn
-                : null,
-            isLoading: _isLoading,
-          ),
-          const SizedBox(height: 16),
         ],
       ),
     );
