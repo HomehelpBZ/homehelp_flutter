@@ -22,7 +22,7 @@ class AppStrings {
   String get welcomeHkSubtitle =>
       isAmharic ? 'መገለጫ ይፍጠሩ እና ከቤተሰቦች ጋር ይገናኙ' : 'Create a profile and connect with families';
   String get welcomeFooter =>
-      isAmharic ? 'ሁሉም ቤት ሠራተኞች መታወቂያ ያረጋገጡ ናቸው · ነጻ ነው' : 'All housekeepers are ID-verified · Free to use';
+      isAmharic ? 'ሁሉም ቤት ሠራተኞች መታወቂያ ያረጋገጡ ናቸው · አዲስ አበባ' : 'All housekeepers are ID-verified · Addis Ababa';
 
   // ── Common ───────────────────────────────────────────────────────────────
   String get continueBtn => isAmharic ? 'ቀጥል →' : 'Continue →';
@@ -479,4 +479,5 @@ class AppStrings {
   String get guarantorNameHint => isAmharic ? 'ለምሳሌ አበበ ከበደ' : 'e.g. Abebe Kebede';
   String get guarantorPhone => isAmharic ? 'የተያዥ ስልክ ቁጥር *' : 'Guarantor phone number *';
   String get guarantorRelationship => isAmharic ? 'ከእርስዎ ጋር ያለው ግንኙነት *' : 'Relationship to you *';
+  String get seeAll => isAmharic ? 'ሁሉም ይመልከቱ' : 'See all';
 }

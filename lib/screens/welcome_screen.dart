@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../l10n/language_provider.dart';
 import 'housekeeper/hk_auth_screen.dart';
 import '../screens/family/family_auth_screen.dart';
+import 'admin/admin_login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -67,9 +68,15 @@ class WelcomeScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const HkAuthScreen())),
                 ),
                 const SizedBox(height: 28),
-                Text(s.welcomeFooter,
-                    style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11),
-                    textAlign: TextAlign.center),
+                GestureDetector(
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(
+                          builder: (_) => const AdminLoginScreen())),
+                  child: Text(s.welcomeFooter,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.3), fontSize: 11),
+                      textAlign: TextAlign.center),
+                ),
                 const SizedBox(height: 16),
               ],
             ),
