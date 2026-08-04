@@ -9,12 +9,11 @@ class UserService {
   String? get currentUid => _auth.currentUser?.uid;
 
   // ── Create user document after signup ────────────────────────────────────
-  // Called immediately after OTP verification for both Family and HK
   Future<void> createUserDocument({
     required String uid,
     required String phone,
     required String fullName,
-    required String role, // 'family' or 'housekeeper'
+    required String role,
   }) async {
     await _db.collection('users').doc(uid).set({
       'uid': uid,
@@ -59,7 +58,7 @@ class UserService {
     });
   }
 
-  // ── Create HK profile (initial — after OTP) ───────────────────────────────
+  // ── Create HK profile (initial) ───────────────────────────────────────────
   Future<void> createHousekeeperProfile({
     required String uid,
     required String phone,
@@ -193,14 +192,12 @@ class UserService {
   }) async {
     final batch = _db.batch();
 
-    // Save Fayda ID to profile
     final profileRef = _db.collection('housekeeperProfiles').doc(uid);
     batch.update(profileRef, {
       'faydaId': faydaId,
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // Save documents to subcollection
     if (frontIdUrl != null) {
       final frontRef = _db
           .collection('users')
@@ -218,40 +215,6 @@ class UserService {
       });
     }
 
-    if (backIdUrl != null) {
-      final backRef = _db
-          .collection('users')
-          .doc(uid)
-          .collection('documents')
-          .doc('backId');
-      batch.set(backRef, {
-        'documentId': 'backId',
-        'documentType': 'national_id_back',
-        'fileUrl': backIdUrl,
-        'status': 'pending',
-        'reviewedBy': null,
-        'reviewedAt': null,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
-
-    if (selfieUrl != null) {
-      final selfieRef = _db
-          .collection('users')
-          .doc(uid)
-          .collection('documents')
-          .doc('selfie');
-      batch.set(selfieRef, {
-        'documentId': 'selfie',
-        'documentType': 'selfie_with_id',
-        'fileUrl': selfieUrl,
-        'status': 'pending',
-        'reviewedBy': null,
-        'reviewedAt': null,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
-
     await batch.commit();
   }
 
@@ -262,7 +225,6 @@ class UserService {
     required String phone,
     required String relationship,
   }) async {
-    // Save guarantor to subcollection
     await _db
         .collection('users')
         .doc(uid)
@@ -278,33 +240,88 @@ class UserService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // Update HK profile - mark guarantor as added
     await _db.collection('housekeeperProfiles').doc(uid).update({
       'guarantorAdded': true,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // ── Add to verification queue after Step 6 ───────────────────────────────
+  // ── Add to verification queue ─────────────────────────────────────────────
   Future<void> addToVerificationQueue({required String uid}) async {
     await _db.collection('verificationQueue').doc(uid).set({
       'queueId': uid,
       'housekeeperId': uid,
       'submittedAt': FieldValue.serverTimestamp(),
       'priority': 'normal',
-      'status': 'pending',
+      'status': 'pending_guarantor',
       'assignedAdminId': null,
       'reviewedAt': null,
       'reviewedBy': null,
     });
 
-    // Mark profile as submitted
     await _db.collection('housekeeperProfiles').doc(uid).update({
       'profileCompleted': true,
-      'verificationStatus': 'pending',
+      'verificationStatus': 'pending_guarantor',
       'submittedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  // ── Set pending_guarantor status ──────────────────────────────────────────
+  Future<void> setPendingGuarantorStatus({required String uid}) async {
+    await _db.collection('housekeeperProfiles').doc(uid).update({
+      'verificationStatus': 'pending_guarantor',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await _db.collection('verificationQueue').doc(uid).update({
+      'status': 'pending_guarantor',
+    });
+  }
+
+  // ── Save guarantor ID (after profile submission) ──────────────────────────
+  Future<void> saveGuarantorId({
+    required String uid,
+    required String idType,
+    String? faydaId,
+  }) async {
+    final batch = _db.batch();
+
+    final guarantorRef = _db
+        .collection('users')
+        .doc(uid)
+        .collection('guarantors')
+        .doc('guarantor1');
+    batch.update(guarantorRef, {
+      'idType': idType,
+      'faydaId': faydaId,
+      'idSubmittedAt': FieldValue.serverTimestamp(),
+    });
+
+    final profileRef = _db.collection('housekeeperProfiles').doc(uid);
+    batch.update(profileRef, {
+      'verificationStatus': 'pending_review',
+      'guarantorIdSubmitted': true,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    final queueRef = _db.collection('verificationQueue').doc(uid);
+    batch.update(queueRef, {
+      'status': 'pending',
+      'guarantorIdSubmittedAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  // ── Get guarantor ────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>?> getGuarantor(String uid) async {
+    final doc = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('guarantors')
+        .doc('guarantor1')
+        .get();
+    return doc.exists ? doc.data() : null;
   }
 
   // ── Get HK profile ────────────────────────────────────────────────────────
@@ -316,8 +333,7 @@ class UserService {
 
   // ── Get family profile ────────────────────────────────────────────────────
   Future<Map<String, dynamic>?> getFamilyProfile(String uid) async {
-    final doc =
-        await _db.collection('familyProfiles').doc(uid).get();
+    final doc = await _db.collection('familyProfiles').doc(uid).get();
     return doc.exists ? doc.data() : null;
   }
 

@@ -6,6 +6,7 @@ import '../../../widgets/shared_widgets.dart';
 import '../../../l10n/language_provider.dart';
 import '../../../services/user_service.dart';
 import '../hk_dashboard_screen.dart';
+import '../guarantor_id_screen.dart';
 
 class Step6Guarantor extends StatefulWidget {
   const Step6Guarantor({super.key});
@@ -176,26 +177,31 @@ class _Step6GuarantorState extends State<Step6Guarantor> {
                     onPressed: _isValid && !_isSaving
                         ? () async {
                             setState(() => _isSaving = true);
+                            bool success = false;
                             try {
                               final uid = FirebaseAuth.instance.currentUser?.uid;
                               if (uid != null) {
-                                // Save guarantor to Firestore
                                 await _userService.saveGuarantor(
                                   uid: uid,
                                   fullName: _nameController.text.trim(),
                                   phone: _phoneController.text,
                                   relationship: _relationship!,
                                 );
-                                // Add to verification queue
                                 await _userService.addToVerificationQueue(uid: uid);
+                                await _userService.setPendingGuarantorStatus(uid: uid);
+                                success = true;
                               }
                             } catch (e) {
-                              // Continue even if save fails
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error saving: \${e.toString()}')),
+                                );
+                              }
                             } finally {
                               if (mounted) setState(() => _isSaving = false);
                             }
-                            if (mounted) {
-                              setState(() => _submitted = true);
+                            if (mounted && success) {
+                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const GuarantorIdScreen()));
                             }
                           }
                         : null,

@@ -5,8 +5,9 @@ class AdminService {
 
   // ── Get pending verification queue ────────────────────────────────────────
   Stream<QuerySnapshot> getPendingQueue() {
-    // NOTE: orderBy('submittedAt') removed to avoid Firestore composite index requirement.
-    // When migrating to Supabase or PostgreSQL, add ORDER BY submitted_at ASC back.
+    // NOTE: Only show 'pending' status (guarantor ID submitted, ready for review).
+    // 'pending_guarantor' profiles are excluded until HK submits guarantor ID.
+    // orderBy removed to avoid Firestore composite index — add back when migrating.
     return _db
         .collection('verificationQueue')
         .where('status', isEqualTo: 'pending')

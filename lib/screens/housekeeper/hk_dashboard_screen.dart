@@ -3,7 +3,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
 import '../../models/job.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'hk_messages_screen.dart';
 import 'hk_profile_screen.dart';
 import 'hk_settings_screen.dart';
@@ -20,7 +22,31 @@ class HkDashboardScreen extends StatefulWidget {
 class _HkDashboardScreenState extends State<HkDashboardScreen> {
   int _tab = 0;
   final AuthService _authService = AuthService();
+  final UserService _userService = UserService();
   final Set<String> _expressedInterest = {};
+  Map<String, dynamic>? _hkProfile;
+  bool _profileLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  void _loadProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final profile = await _userService.getHkProfile(uid);
+      if (mounted) {
+        setState(() {
+          _hkProfile = profile;
+          _profileLoading = false;
+        });
+      }
+    } else {
+      if (mounted) setState(() => _profileLoading = false);
+    }
+  }
 
   void _signOut() {
     showDialog(
@@ -53,6 +79,15 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 
   @override
@@ -102,49 +137,34 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
                   const SizedBox(height: 12),
 
                   // Profile row
-                  Row(
+                  _profileLoading
+                      ? const SizedBox(height: 56)
+                      : Row(
                     children: [
                       CircleAvatar(
                         radius: 24,
                         backgroundColor: Colors.white.withOpacity(0.2),
-                        child: const Text('TK',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500)),
+                        child: Text(
+                          _getInitials(_hkProfile?['fullName'] ?? ''),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Tigist Bekele',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500)),
+                            Text(
+                              _hkProfile?['fullName'] ?? '',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500)),
                             const SizedBox(height: 3),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppTheme.amberLight,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.access_time,
-                                      size: 11, color: AppTheme.amber),
-                                  SizedBox(width: 4),
-                                  Text('Profile under review',
-                                      style: TextStyle(
-                                          color: AppTheme.amber,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500)),
-                                ],
-                              ),
-                            ),
+                            _StatusBadge(
+                                status: _hkProfile?['verificationStatus'] ?? 'pending_guarantor'),
                           ],
                         ),
                       ),
@@ -294,6 +314,15 @@ class _JobPreviewCard extends StatelessWidget {
     required this.onTap,
   });
 
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = LanguageProvider.strings(context);
@@ -380,11 +409,82 @@ class _JobPreviewCard extends StatelessWidget {
   }
 }
 
+// ── Status badge ─────────────────────────────────────────────────────────────
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color bg;
+    Color fg;
+    IconData icon;
+    String label;
+
+    switch (status) {
+      case 'approved':
+        bg = const Color(0xFFDCFCE7);
+        fg = const Color(0xFF166534);
+        icon = Icons.check_circle;
+        label = 'Profile live';
+        break;
+      case 'rejected':
+        bg = AppTheme.redLight;
+        fg = AppTheme.red;
+        icon = Icons.cancel;
+        label = 'Profile rejected';
+        break;
+      case 'pending_review':
+        bg = AppTheme.amberLight;
+        fg = AppTheme.amber;
+        icon = Icons.access_time;
+        label = 'Under review';
+        break;
+      case 'pending_guarantor':
+      default:
+        bg = AppTheme.amberLight;
+        fg = AppTheme.amber;
+        icon = Icons.warning_amber_outlined;
+        label = 'Add guarantor ID';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: fg),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  color: fg,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Stat widget ───────────────────────────────────────────────────────────────
 class _Stat extends StatelessWidget {
   final String value;
   final String label;
   const _Stat(this.value, this.label);
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -416,6 +516,15 @@ class _NotifRow extends StatelessWidget {
   final bool isUnread;
   const _NotifRow(
       {required this.text, required this.time, required this.isUnread});
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {

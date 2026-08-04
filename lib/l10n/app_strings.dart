@@ -480,4 +480,29 @@ class AppStrings {
   String get guarantorPhone => isAmharic ? 'የተያዥ ስልክ ቁጥር *' : 'Guarantor phone number *';
   String get guarantorRelationship => isAmharic ? 'ከእርስዎ ጋር ያለው ግንኙነት *' : 'Relationship to you *';
   String get seeAll => isAmharic ? 'ሁሉም ይመልከቱ' : 'See all';
+// ── Guarantor ID screen ───────────────────────────────────────────────────
+  String get guarantorIdTitle => isAmharic ? 'የተያዥ መታወቂያ' : 'Guarantor ID';
+  String get guarantorIdSubtitle => isAmharic
+      ? 'የተያዥዎን መታወቂያ ያክሉ መገለጫዎን ለማጠናቀቅ'
+      : 'Add your guarantor\'s ID to complete your profile';
+  String get guarantorIdNote => isAmharic
+      ? 'የተያዥዎ መታወቂያ በአድሚን ቡድናችን በስልክ ይረጋገጣል። መታወቂያው ለተያዥዎ የሚሆን መሆኑን ያረጋግጡ።'
+      : 'Your guarantor\'s ID will be verified by our admin team via phone call. Make sure the ID belongs to the guarantor you provided.';
+  String get guarantorIdTypeLabel => isAmharic ? 'የተያዥ መታወቂያ ዓይነት *' : 'Guarantor ID type *';
+  String get guarantorIdTypeFayda => isAmharic ? 'ፋይዳ ብሔራዊ መታወቂያ' : 'Fayda National ID';
+  String get guarantorIdTypeKebele => isAmharic ? 'የቀበሌ መታወቂያ' : 'Kebele ID';
+  String get guarantorIdTypePassport => isAmharic ? 'ፓስፖርት' : 'Passport';
+  String get guarantorIdTypeDriving => isAmharic ? 'የሹፌር ፈቃድ' : 'Driving License';
+  String get guarantorIdTypeOther => isAmharic ? 'ሌላ' : 'Other';
+  String get guarantorFaydaIdLabel => isAmharic ? 'ፋይዳ መታወቂያ ቁጥር' : 'Fayda ID number';
+  String get guarantorFaydaIdHint => isAmharic ? 'ለምሳሌ ETH-2024-00183721' : 'e.g. ETH-2024-00183721';
+  String get guarantorIdPhotoLabel => isAmharic ? 'የመታወቂያ ፎቶ *' : 'ID photo *';
+  String get guarantorIdPhotoUpload => isAmharic ? 'የመታወቂያ ፎቶ ይጫኑ' : 'Upload ID photo';
+  String get guarantorIdPhotoSub => isAmharic ? 'ፎቶ ለመጫን ይጫኑ' : 'Tap to select a photo';
+  String get guarantorIdPhotoNote => isAmharic
+      ? 'ፎቶው ለአድሚን ማረጋገጫ ብቻ ጥቅም ላይ ይውላል'
+      : 'Photo is used for admin verification only';
+  String get guarantorIdSubmitBtn => isAmharic ? 'የተያዥ መታወቂያ አስገባ' : 'Submit guarantor ID';
+  String get guarantorIdLaterBtn => isAmharic ? 'ኋላ አደርጋለሁ' : 'Do this later';
+  
 }
