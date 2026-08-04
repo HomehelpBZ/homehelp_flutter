@@ -313,6 +313,17 @@ class UserService {
     await batch.commit();
   }
 
+  // ── Update bio ───────────────────────────────────────────────────────────
+  Future<void> updateHkBio({
+    required String uid,
+    required String bio,
+  }) async {
+    await _db.collection('housekeeperProfiles').doc(uid).update({
+      'bio': bio,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   // ── Get guarantor ────────────────────────────────────────────────────────
   Future<Map<String, dynamic>?> getGuarantor(String uid) async {
     final doc = await _db

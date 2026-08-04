@@ -303,7 +303,8 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                       context,
                       MaterialPageRoute(
                           builder: (_) =>
-                              const HkEditProfileScreen())),
+                              const HkEditProfileScreen()))
+                              .then((_) => _loadProfile()),
                   icon: const Icon(Icons.edit_outlined,
                       size: 13),
                   label: const Text('Edit'),
