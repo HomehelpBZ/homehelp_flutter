@@ -147,16 +147,16 @@ class AppStrings {
   String get expectedSalary => isAmharic ? 'የሚጠበቅ ወርሃዊ ደሞዝ (ብር)' : 'Expected monthly salary (Birr)';
   String get salaryHint => isAmharic ? 'ለምሳሌ 3000 – 5000 ብር' : 'e.g. 3000 – 5000 Birr';
   String get liveInNote =>
-      isAmharic ? 'ቤት ውስጥ የሚቆዩ ቤት ሠራተኞች ሙሉ ጊዜ ይቆያሉ — ሳምንታዊ ሰሌዳ አያስፈልግም።' : 'Live-in housekeepers stay full time — a weekly schedule is not needed.';
+      isAmharic ? 'አዳሪ ቤት ሠራተኞች ሙሉ ጊዜ ይቆያሉ — ሳምንታዊ ሰሌዳ አያስፈልግም።' : 'Live-in housekeepers stay full time — a weekly schedule is not needed.';
 
   List<String> get jobTypeOptions => isAmharic
       ? ['ምግብ ማብሰል ብቻ', 'ቤት ማጽዳት ብቻ', 'ህፃናት ተንከባካቢ ብቻ', 'ምግብ ማብሰል + ቤት ማጽዳት', 'ሁሉም የቤት ሥራዎች']
       : ['Cooking only', 'Cleaning only', 'Babysitting / childcare only', 'Cooking + cleaning', 'All household duties'];
 
   List<(String, String)> get arrangementOptions => [
-        ('livein', isAmharic ? 'ቤት ውስጥ' : 'Live-in'),
-        ('liveout', isAmharic ? 'ቤት ውጪ (ዕለታዊ)' : 'Live-out (come daily)'),
-        ('either', isAmharic ? 'ሁለቱም ይሆናል' : 'Either is fine'),
+        ('livein', isAmharic ? 'አዳሪ' : 'Live-in'),
+        ('liveout', isAmharic ? 'ተመላላሽ' : 'Live-out'),
+        ('either', isAmharic ? 'ሁለቱም' : 'Either'),
       ];
 
   List<String> get areaOptions => isAmharic
@@ -183,8 +183,7 @@ class AppStrings {
   String get uploadBackSub => isAmharic ? 'መታወቂያዎ የኋላ ካለ' : 'If your ID has a back side';
   String get uploadSelfieSub => isAmharic ? 'መታወቂያው ያለዎ መሆኑን ያረጋግጣል' : 'Confirms the ID belongs to you';
   String get submitProfile => isAmharic ? 'መገለጫ አስረክብ →' : 'Submit profile →';
-  String get changePhoto => isAmharic ? 'ቀይር' : 'Change';
-
+  
   String get profileSubmitted => isAmharic ? 'መገለጫ ቀርቧል!' : 'Profile submitted!';
   String get submittedNote =>
       isAmharic ? 'መገለጫዎ በግምገማ ላይ ነው። ሲፈቀድ እናሳውቅዎታለን።' : "Your profile is under review. We'll notify you once approved.";
@@ -263,8 +262,8 @@ class AppStrings {
   String get filterCooking => isAmharic ? 'ምግብ ማብሰል' : 'Cooking';
   String get filterCleaning => isAmharic ? 'ቤት ማጽዳት' : 'Cleaning';
   String get filterChildcare => isAmharic ? 'ህፃናት እንክብካቤ' : 'Childcare';
-  String get filterLiveIn => isAmharic ? 'ቤት ውስጥ' : 'Live-in';
-  String get filterLiveOut => isAmharic ? 'ቤት ውጪ' : 'Live-out';
+  String get filterLiveIn => isAmharic ? 'አዳሪ' : 'Live-in';
+  String get filterLiveOut => isAmharic ? 'ተመላላሽ' : 'Live-out';
   String housekeepersFound(int n) =>
       isAmharic ? '$n ቤት ሠራተኛ${n == 1 ? '' : ''} ተገኝቷል' : '$n housekeeper${n == 1 ? '' : 's'} found';
   String get noResultsTitle =>
@@ -504,5 +503,5 @@ class AppStrings {
       : 'Photo is used for admin verification only';
   String get guarantorIdSubmitBtn => isAmharic ? 'የተያዥ መታወቂያ አስገባ' : 'Submit guarantor ID';
   String get guarantorIdLaterBtn => isAmharic ? 'ኋላ አደርጋለሁ' : 'Do this later';
-  
+  String get changePhoto => isAmharic ? 'ፎቶ ቀይር' : 'Change photo';
 }
