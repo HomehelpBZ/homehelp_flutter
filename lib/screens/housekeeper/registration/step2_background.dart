@@ -106,10 +106,20 @@ class _Step2BackgroundState extends State<Step2Background> {
                             try {
                               final uid = FirebaseAuth.instance.currentUser?.uid;
                               if (uid != null) {
+                                // Map to English values regardless of language
+                                final enEducation = ['Cannot read or write', 'Can read and write', 'Primary school', 'Secondary school', 'Diploma / TVET', 'Degree or higher'];
+                                final enExperience = ['No experience', 'Less than 1 year', '1 – 3 years', '4 – 6 years', '7+ years'];
+                                final eduOptions = s.educationOptions;
+                                final expOptions = s.experienceOptions;
+                                final eduIdx = eduOptions.indexOf(_education!);
+                                final expIdx = expOptions.indexOf(_experience!);
+                                final englishEdu = eduIdx >= 0 && eduIdx < enEducation.length ? enEducation[eduIdx] : _education!;
+                                final englishExp = expIdx >= 0 && expIdx < enExperience.length ? enExperience[expIdx] : _experience!;
+
                                 await _userService.updateHkStep2(
                                   uid: uid,
-                                  education: _education!,
-                                  experienceYears: _experience!,
+                                  education: englishEdu,
+                                  experienceYears: englishExp,
                                   workHistory: _historyController.text.trim().isEmpty
                                       ? null
                                       : _historyController.text.trim(),

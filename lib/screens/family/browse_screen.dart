@@ -392,22 +392,11 @@ class _BrowseScreenState extends State<BrowseScreen> {
                                     ? _saved.remove(uid)
                                     : _saved.add(uid);
                               }),
-                              onTap: () {
-                                // Navigate to detail — using sample for now
-                                // TODO: Build real HK detail from Firestore
-                                final sampleHk =
-                                    sampleHousekeepers.isNotEmpty
-                                        ? sampleHousekeepers[0]
-                                        : null;
-                                if (sampleHk != null) {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              HkDetailScreen(
-                                                  hk: sampleHk)));
-                                }
-                              },
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => HkDetailScreen(uid: uid)),
+                              ),
                             );
                           },
                         ),

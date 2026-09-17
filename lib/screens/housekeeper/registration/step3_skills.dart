@@ -131,8 +131,22 @@ class _Step3SkillsState extends State<Step3Skills> {
                               final uid = FirebaseAuth.instance.currentUser?.uid;
                               if (uid != null) {
                                 // Convert indexes to actual strings
+                                // Always save English skill names to Firestore
+                                // regardless of current app language
+                                final enSkillOptions = [
+                                  'Traditional Ethiopian cooking',
+                                  'Modern / international cooking',
+                                  'Baking and pastries',
+                                  'General house cleaning',
+                                  'Laundry and ironing',
+                                  'Grocery shopping and errands',
+                                  'Childcare / babysitting',
+                                  'Caring for elderly',
+                                ];
                                 final selectedSkills = _selectedSkillIndexes
-                                    .map((i) => skillOptions[i])
+                                    .map((i) => i < enSkillOptions.length
+                                        ? enSkillOptions[i]
+                                        : skillOptions[i])
                                     .toList();
                                 final selectedLangs = _selectedLanguageIndexes
                                     .map((i) => languageOptions[i])
