@@ -300,7 +300,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 _SectionTitle(
                     title: s.howItWorksTitle,
                     subtitle: s.howItWorksSubtitle),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
+                const HowItWorksIllustration(),
+                const SizedBox(height: 16),
                 _HowItWorksStep(
                   number: '1',
                   icon: Icons.search,
@@ -377,7 +379,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
               padding: const EdgeInsets.all(32),
               child: Column(children: [
-                const Icon(Icons.person_outline, size: 48, color: Colors.white),
+                const HousekeeperIllustration(),
                 const SizedBox(height: 16),
                 Text(s.hkSectionTitle,
                     style: const TextStyle(
@@ -442,7 +444,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               width: double.infinity,
               color: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Row(
+              child: Column(children: [
+                Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _StatBadge(value: '100%', label: s.statVerified),
@@ -452,6 +455,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   _StatBadge(value: s.statCityValue, label: s.statCity),
                 ],
               ),
+              ]),
             ),
 
             // ── Footer ────────────────────────────────────────────────────
