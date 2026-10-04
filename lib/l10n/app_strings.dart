@@ -504,4 +504,39 @@ class AppStrings {
   String get guarantorIdSubmitBtn => isAmharic ? 'የተያዥ መታወቂያ አስገባ' : 'Submit guarantor ID';
   String get guarantorIdLaterBtn => isAmharic ? 'ኋላ አደርጋለሁ' : 'Do this later';
   String get changePhoto => isAmharic ? 'ፎቶ ቀይር' : 'Change photo';
+  String get trustBadge1 => isAmharic ? 'መታወቂያ ተረጋግጧል' : 'ID Verified';
+  String get trustBadge2 => isAmharic ? 'ተያዥ አለ' : 'Guarantor backed';
+  String get trustBadge3 => isAmharic ? 'ከፍተኛ ደረጃ' : 'Top rated';
+  String get alreadyHaveAccount => isAmharic ? 'መለያ አለዎት?' : 'Already have an account?';
+
+  // ── Welcome screen sections ───────────────────────────────────────────────
+  String get howItWorksTitle => isAmharic ? 'እንዴት ይሰራል?' : 'How it works';
+  String get howItWorksSubtitle => isAmharic ? 'ሦስት ቀላል ደረጃዎች' : 'Three simple steps';
+  String get howStep1Title => isAmharic ? 'ይፈልጉ' : 'Browse';
+  String get howStep1Desc => isAmharic ? 'የተረጋገጡ ቤት ሠራተኞችን ያስሱ' : 'Browse verified housekeepers in Addis Ababa';
+  String get howStep2Title => isAmharic ? 'ያረጋግጡ' : 'Verify';
+  String get howStep2Desc => isAmharic ? 'ሁሉም ቤት ሠራተኞች በፋይዳ መታወቂያ ተረጋግጠዋል' : 'All housekeepers are ID-verified with guarantor';
+  String get howStep3Title => isAmharic ? 'ይቅጠሩ' : 'Hire';
+  String get howStep3Desc => isAmharic ? 'ያነጋግሩ እና ይቅጠሩ' : 'Contact and hire with confidence';
+  String get whyHomehelpTitle => isAmharic ? 'ለምን HomeHelp?' : 'Why HomeHelp?';
+  String get whyHomehelpSubtitle => isAmharic ? 'አዲስ አበባ ውስጥ ታማኝ ቤት ሠራተኛ ለማግኘት' : 'The trusted way to find help in Addis Ababa';
+  String get feature1Title => isAmharic ? 'መታወቂያ ተረጋጋጠ' : 'ID Verified';
+  String get feature1Desc => isAmharic ? 'ሁሉም ቤት ሠራተኞች በፋይዳ ተረጋግጠዋል' : 'All housekeepers verified with Fayda ID';
+  String get feature2Title => isAmharic ? 'ተያዥ አለ' : 'Guarantor backed';
+  String get feature2Desc => isAmharic ? 'እያንዳንዱ ቤት ሠራተኛ ተያዥ አለው' : 'Every housekeeper has a verified guarantor';
+  String get feature3Title => isAmharic ? 'ከፍተኛ ደረጃ' : 'Top rated';
+  String get feature3Desc => isAmharic ? 'ቤተሰቦች ደረጃ ይሰጣሉ' : 'Rated and reviewed by families';
+  String get feature4Title => isAmharic ? 'ደህንነቱ የተጠበቀ' : 'Safe & secure';
+  String get feature4Desc => isAmharic ? 'ውሂብዎ ደህንነቱ የተጠበቀ ነው' : 'Your data is safe and private';
+  String get hkSectionTitle => isAmharic ? 'ቤት ሠራተኛ ነዎት?' : 'Are you a housekeeper?';
+  String get hkSectionSubtitle => isAmharic ? 'መገለጫ ይፍጠሩ እና ቤተሰቦችን ያግኙ' : 'Create your free profile and connect with families in Addis Ababa';
+  String get hkBenefit1 => isAmharic ? 'ነፃ መገለጫ ይፍጠሩ' : 'Create your profile for free';
+  String get hkBenefit2 => isAmharic ? 'ከቤተሰቦች ጋር ይገናኙ' : 'Get found by families looking for help';
+  String get hkBenefit3 => isAmharic ? 'ሥራ ማስታወቂያዎችን ይመልከቱ' : 'Browse and apply to job postings';
+  String get hkSectionCta => isAmharic ? 'መገለጫ ፍጠር' : 'Create your profile';
+  String get statVerified => isAmharic ? 'ተረጋግጧል' : 'Verified';
+  String get statFee => isAmharic ? 'የአገልግሎት ክፍያ' : 'Service fee';
+  String get statCity => isAmharic ? 'አዲስ አበባ' : 'Addis Ababa';
+  String get statCityValue => isAmharic ? 'አ.አ' : 'AA';
+
 }
