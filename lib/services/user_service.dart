@@ -354,4 +354,99 @@ class UserService {
       'lastLogin': FieldValue.serverTimestamp(),
     });
   }
+
+  // ── Post a job ────────────────────────────────────────────────────────────
+  Future<String> postJob({
+    required String familyUid,
+    required String jobType,
+    required String arrangement,
+    required Map<String, bool> workingDays,
+    required String area,
+    required String salary,
+    required String description,
+    String? startDate,
+  }) async {
+    final ref = _db.collection('jobs').doc();
+    await ref.set({
+      'jobId': ref.id,
+      'familyId': familyUid,
+      'jobType': jobType,
+      'arrangement': arrangement,
+      'workingDays': workingDays,
+      'area': area,
+      'salary': salary,
+      'description': description,
+      'startDate': startDate,
+      'status': 'open',
+      'interestedHks': [],
+      'interestedCount': 0,
+      'postedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return ref.id;
+  }
+
+  // ── Get family jobs ───────────────────────────────────────────────────────
+  // Filter client-side to avoid Firestore index requirement
+  // When migrating to PostgreSQL, use WHERE family_id = uid ORDER BY posted_at DESC
+  Future<List<Map<String, dynamic>>> getFamilyJobs(String familyUid) async {
+    final snap = await _db.collection('jobs').get();
+    return snap.docs
+        .map((d) => {'id': d.id, ...d.data()})
+        .where((d) => d['familyId'] == familyUid)
+        .toList();
+  }
+
+  // ── Get all open jobs (for HK job board) ─────────────────────────────────
+  // NOTE: orderBy removed to avoid Firestore composite index — add back when migrating
+  Future<List<Map<String, dynamic>>> getOpenJobs() async {
+    final snap = await _db
+        .collection('jobs')
+        .where('status', isEqualTo: 'open')
+        .get();
+    return snap.docs
+        .map((d) => {'id': d.id, ...d.data()})
+        .toList();
+  }
+
+  // ── Express interest in a job ─────────────────────────────────────────────
+  Future<void> expressInterest({
+    required String jobId,
+    required String hkUid,
+  }) async {
+    await _db.collection('jobs').doc(jobId).update({
+      'interestedHks': FieldValue.arrayUnion([hkUid]),
+      'interestedCount': FieldValue.increment(1),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ── Delete a job ──────────────────────────────────────────────────────────
+  Future<void> deleteJob(String jobId) async {
+    await _db.collection('jobs').doc(jobId).delete();
+  }
+
+  // ── Update job ────────────────────────────────────────────────────────────
+  Future<void> updateJob({
+    required String jobId,
+    required String jobType,
+    required String arrangement,
+    required Map<String, bool> workingDays,
+    required String area,
+    required String salary,
+    required String description,
+    String? startDate,
+  }) async {
+    await _db.collection('jobs').doc(jobId).update({
+      'jobType': jobType,
+      'arrangement': arrangement,
+      'workingDays': workingDays,
+      'area': area,
+      'salary': salary,
+      'description': description,
+      'startDate': startDate,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
 }

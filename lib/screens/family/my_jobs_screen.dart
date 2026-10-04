@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/job.dart';
+import '../../services/user_service.dart';
 import '../../models/housekeeper.dart';
 import 'post_job_screen.dart';
 import 'family_auth_screen.dart';
@@ -17,11 +19,30 @@ class MyJobsScreen extends StatefulWidget {
 }
 
 class _MyJobsScreenState extends State<MyJobsScreen> {
-  // In a real app these would come from a backend
-  // For prototype we show sample jobs as if the family posted them
-  final List<Job> _myJobs = List.from(sampleJobs.take(2));
+  final UserService _userService = UserService();
+  List<Map<String, dynamic>> _myJobs = [];
+  bool _isLoading = true;
 
-  void _deleteJob(Job job, s) {
+  @override
+  void initState() {
+    super.initState();
+    _loadJobs();
+  }
+
+  void _loadJobs() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final jobs = await _userService.getFamilyJobs(uid);
+      if (mounted) setState(() {
+        _myJobs = jobs;
+        _isLoading = false;
+      });
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _deleteJob(Map<String, dynamic> job, s) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -35,7 +56,8 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.red),
-            onPressed: () {
+            onPressed: () async {
+              await _userService.deleteJob(job['id']);
               setState(() => _myJobs.remove(job));
               Navigator.pop(context);
               showSuccessToast(context, s.jobDeletedSuccess);
@@ -60,7 +82,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
           final result = await Navigator.push(context,
               MaterialPageRoute(builder: (_) => PostJobScreen(isGuest: isGuest)));
           if (result == true && !isGuest) {
-            setState(() {});
+            _loadJobs();
           }
         },
         backgroundColor: AppTheme.primary,
@@ -70,6 +92,8 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
       ),
       body: isGuest
           ? _GuestJobsPlaceholder(s: s)
+          : _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : _myJobs.isEmpty
           ? Center(
               child: Column(
@@ -93,24 +117,29 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                 ],
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              itemCount: _myJobs.length,
-              itemBuilder: (context, i) {
-                final job = _myJobs[i];
-                return _MyJobCard(
-                  job: job,
-                  s: s,
-                  onEdit: () async {
-                    final result = await Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const PostJobScreen(isEditing: true)));
-                    if (result == true) setState(() {});
-                  },
-                  onDelete: () => _deleteJob(job, s),
-                  onViewApplicants: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => InterestedHksScreen(job: job))),
-                );
-              },
+          : RefreshIndicator(
+              onRefresh: () async => _loadJobs(),
+              color: AppTheme.primary,
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                itemCount: _myJobs.length,
+                itemBuilder: (context, i) {
+                  final job = _myJobs[i];
+                  return _MyJobCardFirestore(
+                    job: job,
+                    s: s,
+                    onEdit: () async {
+                      final result = await Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => PostJobScreen(
+                            isEditing: true,
+                            existingJob: job,
+                          )));
+                      if (result == true) _loadJobs();
+                    },
+                    onDelete: () => _deleteJob(job, s),
+                  );
+                },
+              ),
             ),
     );
   }
@@ -421,6 +450,140 @@ class InterestedHksScreen extends StatelessWidget {
                 );
               },
             ),
+    );
+  }
+}
+
+// ── Firestore job card ────────────────────────────────────────────────────────
+class _MyJobCardFirestore extends StatelessWidget {
+  final Map<String, dynamic> job;
+  final dynamic s;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _MyJobCardFirestore({
+    required this.job, required this.s,
+    required this.onEdit, required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final jobType = job['jobType'] as String? ?? '';
+    final area = job['area'] as String? ?? '';
+    final arrangement = job['arrangement'] as String? ?? '';
+    final salary = job['salary'] as String? ?? '';
+    final status = job['status'] as String? ?? 'open';
+    final interestedCount = job['interestedCount'] as int? ?? 0;
+    final description = job['description'] as String? ?? '';
+    final startDate = job['startDate'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppTheme.grey200, width: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: const BoxDecoration(
+            color: AppTheme.primaryLight,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(jobType, style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w500,
+                    color: AppTheme.primaryText)),
+                Text('$area · $arrangement', style: const TextStyle(
+                    fontSize: 12, color: AppTheme.primaryText)),
+              ]),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(s.jobStatusOpen, style: const TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w500,
+                    color: Color(0xFF166534))),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.payments_outlined, size: 14, color: AppTheme.grey400),
+              const SizedBox(width: 6),
+              Text('$salary ${s.birr}', style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.grey800)),
+              if (startDate.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                const Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.grey400),
+                const SizedBox(width: 6),
+                Text(startDate, style: const TextStyle(
+                    fontSize: 12, color: AppTheme.grey600)),
+              ],
+            ]),
+            if (description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(description, style: const TextStyle(
+                  fontSize: 12, color: AppTheme.grey600, height: 1.5),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+            ],
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: interestedCount > 0 ? AppTheme.amberLight : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.people_outline, size: 14,
+                    color: interestedCount > 0 ? AppTheme.amber : AppTheme.grey400),
+                const SizedBox(width: 5),
+                Text('$interestedCount ${s.interestedCount}',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
+                        color: interestedCount > 0 ? AppTheme.amber : AppTheme.grey600)),
+              ]),
+            ),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.edit_outlined, size: 13),
+                  label: Text(s.editJob),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    textStyle: const TextStyle(fontSize: 12),
+                    minimumSize: Size.zero,
+                  ),
+                  onPressed: onEdit,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.delete_outline, size: 13, color: AppTheme.red),
+                  label: Text(s.deleteJob, style: const TextStyle(color: AppTheme.red)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    textStyle: const TextStyle(fontSize: 12),
+                    minimumSize: Size.zero,
+                    side: const BorderSide(color: Color(0xFFF09595)),
+                  ),
+                  onPressed: onDelete,
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      ]),
     );
   }
 }

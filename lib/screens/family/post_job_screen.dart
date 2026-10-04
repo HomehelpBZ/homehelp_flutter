@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'family_auth_screen.dart';
+import '../../services/user_service.dart';
 
 class PostJobScreen extends StatefulWidget {
   final bool isEditing;
-  final bool isGuest; // Fix 4 — guest restriction
-  const PostJobScreen({super.key, this.isEditing = false, this.isGuest = false});
+  final bool isGuest;
+  final Map<String, dynamic>? existingJob; // existing job data for editing
+  const PostJobScreen({super.key, this.isEditing = false, this.isGuest = false, this.existingJob});
 
   @override
   State<PostJobScreen> createState() => _PostJobScreenState();
@@ -17,13 +20,59 @@ class _PostJobScreenState extends State<PostJobScreen> {
   int? _selectedJobTypeIndex;
   String? _arrangement;
   final Map<int, bool> _days = {0:true,1:true,2:true,3:true,4:true,5:false,6:false};
-
-  // Fix 2 — index-based area to survive language switch
   int? _selectedAreaIndex;
-
   final _salaryController = TextEditingController();
-  DateTime? _selectedDate; // Fix 1 — proper date object
+  DateTime? _selectedDate;
   final _descController = TextEditingController();
+  final UserService _userService = UserService();
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill if editing — done after first frame so strings are available
+    if (widget.existingJob != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _prefillFromJob();
+      });
+    }
+  }
+
+  void _prefillFromJob() {
+    if (widget.existingJob == null) return;
+    final job = widget.existingJob!;
+    final s = LanguageProvider.strings(context);
+    final jobTypes = s.jobTypeOptions;
+    final areaOptions = s.areaOptions;
+
+    final jobType = job['jobType'] as String? ?? '';
+    final area = job['area'] as String? ?? '';
+
+    setState(() {
+      _salaryController.text = job['salary'] as String? ?? '';
+      _descController.text = job['description'] as String? ?? '';
+      _arrangement = job['arrangement'] as String?;
+
+      // Match job type index
+      final jtIdx = jobTypes.indexOf(jobType);
+      if (jtIdx >= 0) _selectedJobTypeIndex = jtIdx;
+
+      // Match area index
+      final aIdx = areaOptions.indexOf(area);
+      if (aIdx >= 0) _selectedAreaIndex = aIdx;
+      else if (area == 'Any area') _selectedAreaIndex = -1;
+
+      // Working days
+      final workingDays = job['workingDays'] as Map<String, dynamic>? ?? {};
+      _days[0] = workingDays['mon'] ?? true;
+      _days[1] = workingDays['tue'] ?? true;
+      _days[2] = workingDays['wed'] ?? true;
+      _days[3] = workingDays['thu'] ?? true;
+      _days[4] = workingDays['fri'] ?? true;
+      _days[5] = workingDays['sat'] ?? false;
+      _days[6] = workingDays['sun'] ?? false;
+    });
+  }
 
   bool get _isValid =>
       _selectedJobTypeIndex != null &&
@@ -72,9 +121,59 @@ class _PostJobScreenState extends State<PostJobScreen> {
     return '$d/$m/$y';
   }
 
-  void _submit(s) {
-    showSuccessToast(context, widget.isEditing ? s.jobUpdatedSuccess : s.jobPostedSuccess);
-    Navigator.pop(context, true);
+  void _submit(s, List<String> jobTypes, List<String> areaOptions) async {
+    setState(() => _isSaving = true);
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        final jobType = jobTypes[_selectedJobTypeIndex!];
+        final area = _selectedAreaIndex == -1 || _selectedAreaIndex == null
+            ? 'Any area'
+            : areaOptions[_selectedAreaIndex!];
+        final workingDays = {
+          'mon': _days[0] ?? true,
+          'tue': _days[1] ?? true,
+          'wed': _days[2] ?? true,
+          'thu': _days[3] ?? true,
+          'fri': _days[4] ?? true,
+          'sat': _days[5] ?? false,
+          'sun': _days[6] ?? false,
+        };
+        if (widget.isEditing && widget.existingJob != null) {
+                await _userService.updateJob(
+                  jobId: widget.existingJob!['id'],
+                  jobType: jobType,
+                  arrangement: _arrangement!,
+                  workingDays: workingDays,
+                  area: area,
+                  salary: _salaryController.text.trim(),
+                  description: _descController.text.trim(),
+                  startDate: _selectedDate != null ? _formatDate(_selectedDate!) : null,
+                );
+              } else {
+                await _userService.postJob(
+                  familyUid: uid,
+                  jobType: jobType,
+                  arrangement: _arrangement!,
+                  workingDays: workingDays,
+                  area: area,
+                  salary: _salaryController.text.trim(),
+                  description: _descController.text.trim(),
+                  startDate: _selectedDate != null ? _formatDate(_selectedDate!) : null,
+                );
+              }
+      }
+      if (mounted) {
+        showSuccessToast(context, widget.isEditing ? s.jobUpdatedSuccess : s.jobPostedSuccess);
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        showSuccessToast(context, 'Failed to post job. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -305,7 +404,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
 
             PrimaryButton(
               label: widget.isEditing ? s.saveChanges : s.postJob,
-              onPressed: _isValid ? () => _submit(s) : null,
+              isLoading: _isSaving,
+              onPressed: _isValid && !_isSaving ? () => _submit(s, jobTypes, areaOptions) : null,
             ),
             const SizedBox(height: 10),
             SecondaryButton(label: s.cancel, onPressed: () => Navigator.pop(context)),

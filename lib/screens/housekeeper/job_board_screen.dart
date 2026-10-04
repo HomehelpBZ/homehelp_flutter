@@ -3,7 +3,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/job.dart';
+import '../../services/user_service.dart';
 
 class JobBoardScreen extends StatefulWidget {
   const JobBoardScreen({super.key});
@@ -14,24 +16,48 @@ class JobBoardScreen extends StatefulWidget {
 
 class _JobBoardScreenState extends State<JobBoardScreen> {
   final _searchController = TextEditingController();
+  final UserService _userService = UserService();
   String _query = '';
   String _activeChip = 'all';
   final Set<String> _expressedInterest = {};
+  List<Map<String, dynamic>> _jobs = [];
+  bool _isLoading = true;
 
-  List<Job> get _filtered {
-    return sampleJobs.where((job) {
+  @override
+  void initState() {
+    super.initState();
+    _loadJobs();
+  }
+
+  void _loadJobs() async {
+    try {
+      final jobs = await _userService.getOpenJobs();
+      if (mounted) setState(() {
+        _jobs = jobs;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  List<Map<String, dynamic>> get _filtered {
+    return _jobs.where((job) {
       final q = _query.toLowerCase();
+      final jobType = (job['jobType'] as String? ?? '').toLowerCase();
+      final area = (job['area'] as String? ?? '').toLowerCase();
+      final arrangement = (job['arrangement'] as String? ?? '').toLowerCase();
+
       final matchesQuery = q.isEmpty ||
-          job.jobType.toLowerCase().contains(q) ||
-          job.area.toLowerCase().contains(q) ||
-          job.familyLastName.toLowerCase().contains(q);
+          jobType.contains(q) ||
+          area.contains(q);
       final matchesChip = _activeChip == 'all' ||
-          (_activeChip == 'cooking' && job.jobType.toLowerCase().contains('cook')) ||
-          (_activeChip == 'cleaning' && job.jobType.toLowerCase().contains('clean')) ||
-          (_activeChip == 'childcare' && job.jobType.toLowerCase().contains('child')) ||
-          (_activeChip == 'livein' && job.arrangement.toLowerCase().contains('live-in')) ||
-          (_activeChip == 'liveout' && job.arrangement.toLowerCase().contains('live-out'));
-      return matchesQuery && matchesChip && job.status == 'open';
+          (_activeChip == 'cooking' && jobType.contains('cook')) ||
+          (_activeChip == 'cleaning' && jobType.contains('clean')) ||
+          (_activeChip == 'childcare' && jobType.contains('child')) ||
+          (_activeChip == 'livein' && arrangement.contains('livein')) ||
+          (_activeChip == 'liveout' && arrangement.contains('liveout'));
+      return matchesQuery && matchesChip;
     }).toList();
   }
 
@@ -125,7 +151,9 @@ class _JobBoardScreenState extends State<JobBoardScreen> {
           const SizedBox(height: 6),
 
           Expanded(
-            child: results.isEmpty
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                : results.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -137,29 +165,34 @@ class _JobBoardScreenState extends State<JobBoardScreen> {
                       ],
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: results.length,
-                    itemBuilder: (context, i) {
-                      final job = results[i];
-                      return _JobCard(
-                        job: job,
-                        s: s,
-                        hasExpressedInterest: _expressedInterest.contains(job.id),
-                        onTap: () => Navigator.push(context,
-                            MaterialPageRoute(builder: (_) => JobDetailScreen(
-                              job: job,
-                              hasExpressedInterest: _expressedInterest.contains(job.id),
-                              onExpressInterest: () => setState(() => _expressedInterest.add(job.id)),
-                            ))),
-                        onExpressInterest: () {
-                          if (!_expressedInterest.contains(job.id)) {
-                            setState(() => _expressedInterest.add(job.id));
-                            showSuccessToast(context, s.interestExpressed);
-                          }
-                        },
-                      );
-                    },
+                : RefreshIndicator(
+                    onRefresh: () async => _loadJobs(),
+                    color: AppTheme.primary,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: results.length,
+                      itemBuilder: (context, i) {
+                        final job = results[i];
+                        final jobId = job['id'] as String;
+                        return _JobCardFirestore(
+                          job: job,
+                          s: s,
+                          hasExpressedInterest: _expressedInterest.contains(jobId),
+                          onTap: () {},
+                          onExpressInterest: () async {
+                            if (!_expressedInterest.contains(jobId)) {
+                              final uid = FirebaseAuth.instance.currentUser?.uid;
+                              if (uid != null) {
+                                await _userService.expressInterest(
+                                    jobId: jobId, hkUid: uid);
+                              }
+                              setState(() => _expressedInterest.add(jobId));
+                              showSuccessToast(context, s.interestExpressed);
+                            }
+                          },
+                        );
+                      },
+                    ),
                   ),
           ),
         ],
@@ -580,6 +613,92 @@ class _DetailCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(children: children),
+    );
+  }
+}
+
+class _JobCardFirestore extends StatelessWidget {
+  final Map<String, dynamic> job;
+  final dynamic s;
+  final bool hasExpressedInterest;
+  final VoidCallback onTap;
+  final VoidCallback onExpressInterest;
+
+  const _JobCardFirestore({
+    required this.job, required this.s, required this.hasExpressedInterest,
+    required this.onTap, required this.onExpressInterest,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final jobType = job['jobType'] as String? ?? '';
+    final area = job['area'] as String? ?? '';
+    final arrangement = job['arrangement'] as String? ?? '';
+    final salary = job['salary'] as String? ?? '';
+    final interestedCount = job['interestedCount'] as int? ?? 0;
+
+    final displayArrangement = arrangement == 'livein' ? 'Live-in'
+        : arrangement == 'liveout' ? 'Live-out'
+        : arrangement == 'either' ? 'Either'
+        : arrangement;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppTheme.grey200, width: 0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Expanded(child: Text(jobType, style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.grey800))),
+            Text('$salary ${s.birr}', style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.primary)),
+          ]),
+          const SizedBox(height: 4),
+          Text('$area · $displayArrangement',
+              style: const TextStyle(fontSize: 11, color: AppTheme.grey600)),
+          const SizedBox(height: 8),
+          Row(children: [
+            const Icon(Icons.people_outline, size: 12, color: AppTheme.grey400),
+            const SizedBox(width: 4),
+            Text('\$interestedCount \${s.interestedCount}',
+                style: const TextStyle(fontSize: 11, color: AppTheme.grey400)),
+          ]),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: hasExpressedInterest
+                ? Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      const Icon(Icons.check_circle, size: 14, color: AppTheme.primary),
+                      const SizedBox(width: 6),
+                      Text(s.alreadyExpressedInterest, style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w500,
+                          color: AppTheme.primaryText)),
+                    ]),
+                  )
+                : ElevatedButton.icon(
+                    icon: const Icon(Icons.thumb_up_outlined, size: 14),
+                    label: Text(s.expressInterest),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                    onPressed: onExpressInterest,
+                  ),
+          ),
+        ]),
+      ),
     );
   }
 }

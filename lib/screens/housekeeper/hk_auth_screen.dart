@@ -134,7 +134,7 @@ class HkAuthScreen extends StatelessWidget {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const _HkSignInScreen()),
+                            builder: (_) => const HkSignInScreen()),
                       ),
                       child: Container(
                         width: double.infinity,
@@ -503,14 +503,14 @@ class _HkSignUpScreenState extends State<_HkSignUpScreen> {
 }
 
 // ── Sign In Screen ────────────────────────────────────────────────────────────
-class _HkSignInScreen extends StatefulWidget {
-  const _HkSignInScreen();
+class HkSignInScreen extends StatefulWidget {
+  const HkSignInScreen({super.key});
 
   @override
-  State<_HkSignInScreen> createState() => _HkSignInScreenState();
+  State<HkSignInScreen> createState() => _HkSignInScreenState();
 }
 
-class _HkSignInScreenState extends State<_HkSignInScreen> {
+class _HkSignInScreenState extends State<HkSignInScreen> {
   final AuthService _authService = AuthService();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();

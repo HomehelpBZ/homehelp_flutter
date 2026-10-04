@@ -66,7 +66,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const FamilyAuthScreen()));
+                    MaterialPageRoute(builder: (_) => const FamilySignInScreen()));
               },
             ),
             const SizedBox(height: 10),
@@ -79,7 +79,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const HkAuthScreen()));
+                    MaterialPageRoute(builder: (_) => const HkSignInScreen()));
               },
             ),
             const SizedBox(height: 16),
