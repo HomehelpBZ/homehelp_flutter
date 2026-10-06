@@ -7,6 +7,7 @@ import '../../models/job.dart';
 import '../../services/user_service.dart';
 import '../../models/housekeeper.dart';
 import 'post_job_screen.dart';
+import 'interested_hks_screen.dart';
 import 'family_auth_screen.dart';
 import 'family_chat_screen.dart';
 
@@ -358,102 +359,6 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ── Interested HKs screen ─────────────────────────────────────────────────────
-class InterestedHksScreen extends StatelessWidget {
-  final Job job;
-  const InterestedHksScreen({super.key, required this.job});
-
-  @override
-  Widget build(BuildContext context) {
-    final s = LanguageProvider.strings(context);
-    // Sample interested HKs — in real app from backend
-    final interested = sampleHousekeepers.take(job.interestedCount.clamp(0, 4)).toList();
-
-    return Scaffold(
-      appBar: navyAppBar(s.interestedHks),
-      body: interested.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.people_outline, size: 48, color: AppTheme.grey200),
-                  const SizedBox(height: 14),
-                  Text(s.noInterestedHks,
-                      style: const TextStyle(fontSize: 13, color: AppTheme.grey400),
-                      textAlign: TextAlign.center),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: interested.length,
-              itemBuilder: (context, i) {
-                final hk = interested[i];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: AppTheme.grey200, width: 0.5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(children: [
-                        HkAvatar(initials: hk.initials, color: AppTheme.primary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(hk.name, style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.grey800)),
-                            Text('${hk.location} · ${hk.yearsExperience} ${s.yrs}',
-                                style: const TextStyle(fontSize: 11, color: AppTheme.grey600)),
-                            const SizedBox(height: 4),
-                            Row(children: [
-                              StarRating(rating: hk.rating, reviewCount: hk.reviewCount),
-                              const SizedBox(width: 6),
-                              const VerifiedBadge(),
-                            ]),
-                          ]),
-                        ),
-                      ]),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.message_outlined, size: 13),
-                            label: Text(s.startChat),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              textStyle: const TextStyle(fontSize: 12),
-                              minimumSize: Size.zero,
-                            ),
-                            onPressed: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => FamilyChatScreen(hk: hk))),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              textStyle: const TextStyle(fontSize: 12),
-                              minimumSize: Size.zero,
-                            ),
-                            child: Text(s.ignore),
-                          ),
-                        ),
-                      ]),
-                    ],
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
 // ── Firestore job card ────────────────────────────────────────────────────────
 class _MyJobCardFirestore extends StatelessWidget {
   final Map<String, dynamic> job;
@@ -471,6 +376,10 @@ class _MyJobCardFirestore extends StatelessWidget {
     final jobType = job['jobType'] as String? ?? '';
     final area = job['area'] as String? ?? '';
     final arrangement = job['arrangement'] as String? ?? '';
+    final displayArrangement = arrangement == 'livein' ? 'Live-in'
+        : arrangement == 'liveout' ? 'Live-out'
+        : arrangement == 'either' ? 'Either'
+        : arrangement;
     final salary = job['salary'] as String? ?? '';
     final status = job['status'] as String? ?? 'open';
     final interestedCount = job['interestedCount'] as int? ?? 0;
@@ -498,7 +407,7 @@ class _MyJobCardFirestore extends StatelessWidget {
                 Text(jobType, style: const TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w500,
                     color: AppTheme.primaryText)),
-                Text('$area · $arrangement', style: const TextStyle(
+                Text("$area · $displayArrangement", style: const TextStyle(
                     fontSize: 12, color: AppTheme.primaryText)),
               ]),
               Container(
@@ -537,20 +446,28 @@ class _MyJobCardFirestore extends StatelessWidget {
                   maxLines: 2, overflow: TextOverflow.ellipsis),
             ],
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: interestedCount > 0 ? AppTheme.amberLight : const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8),
+            GestureDetector(
+              onTap: interestedCount > 0 ? () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => InterestedHksScreen(job: job))) : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: interestedCount > 0 ? AppTheme.amberLight : const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.people_outline, size: 14,
+                      color: interestedCount > 0 ? AppTheme.amber : AppTheme.grey400),
+                  const SizedBox(width: 5),
+                  Text("$interestedCount ${s.interestedCount}",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
+                          color: interestedCount > 0 ? AppTheme.amber : AppTheme.grey600)),
+                  if (interestedCount > 0) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right, size: 14, color: AppTheme.amber),
+                  ],
+                ]),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.people_outline, size: 14,
-                    color: interestedCount > 0 ? AppTheme.amber : AppTheme.grey400),
-                const SizedBox(width: 5),
-                Text('$interestedCount ${s.interestedCount}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
-                        color: interestedCount > 0 ? AppTheme.amber : AppTheme.grey600)),
-              ]),
             ),
             const SizedBox(height: 10),
             Row(children: [

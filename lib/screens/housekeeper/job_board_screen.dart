@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/job.dart';
 import '../../services/user_service.dart';
 
@@ -22,18 +23,45 @@ class _JobBoardScreenState extends State<JobBoardScreen> {
   final Set<String> _expressedInterest = {};
   List<Map<String, dynamic>> _jobs = [];
   bool _isLoading = true;
+  String _hkStatus = '';
 
   @override
   void initState() {
     super.initState();
     _loadJobs();
+    _loadHkStatus();
+  }
+
+  void _loadHkStatus() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('housekeeperProfiles')
+          .doc(uid)
+          .get();
+      if (doc.exists && mounted) {
+        setState(() => _hkStatus = doc.data()?['verificationStatus'] ?? '');
+      }
+    }
   }
 
   void _loadJobs() async {
     try {
       final jobs = await _userService.getOpenJobs();
+      // Check which jobs this HK already expressed interest in
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final alreadyInterested = <String>{};
+      if (uid != null) {
+        for (final job in jobs) {
+          final hks = (job['interestedHks'] as List?)?.cast<String>() ?? [];
+          if (hks.contains(uid)) {
+            alreadyInterested.add(job['id'] as String);
+          }
+        }
+      }
       if (mounted) setState(() {
         _jobs = jobs;
+        _expressedInterest.addAll(alreadyInterested);
         _isLoading = false;
       });
     } catch (e) {
@@ -180,6 +208,47 @@ class _JobBoardScreenState extends State<JobBoardScreen> {
                           hasExpressedInterest: _expressedInterest.contains(jobId),
                           onTap: () {},
                           onExpressInterest: () async {
+                            if (_hkStatus != 'approved') {
+                              String title;
+                              String message;
+                              switch (_hkStatus) {
+                                case 'pending_guarantor':
+                                  title = 'Add guarantor ID first';
+                                  message = 'Please add your guarantor ID to complete your profile before expressing interest in jobs.';
+                                  break;
+                                case 'pending_review':
+                                  title = 'Profile under review';
+                                  message = 'Your profile has been submitted and is being reviewed by our admin team. You will be notified once approved.';
+                                  break;
+                                case 'pending':
+                                  title = 'Profile under review';
+                                  message = 'Your profile is in our review queue. Please wait for admin approval before expressing interest.';
+                                  break;
+                                case 'rejected':
+                                  title = 'Profile rejected';
+                                  message = 'Your profile was not approved. Please contact support for more information.';
+                                  break;
+                                default:
+                                  title = 'Profile not approved';
+                                  message = 'Your profile needs to be approved by our admin team before you can express interest in jobs.';
+                              }
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: Text(title,
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                  content: Text(message),
+                                  actions: [
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              );
+                              return;
+                            }
                             if (!_expressedInterest.contains(jobId)) {
                               final uid = FirebaseAuth.instance.currentUser?.uid;
                               if (uid != null) {
@@ -663,12 +732,6 @@ class _JobCardFirestore extends StatelessWidget {
           Text('$area · $displayArrangement',
               style: const TextStyle(fontSize: 11, color: AppTheme.grey600)),
           const SizedBox(height: 8),
-          Row(children: [
-            const Icon(Icons.people_outline, size: 12, color: AppTheme.grey400),
-            const SizedBox(width: 4),
-            Text('\$interestedCount \${s.interestedCount}',
-                style: const TextStyle(fontSize: 11, color: AppTheme.grey400)),
-          ]),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
