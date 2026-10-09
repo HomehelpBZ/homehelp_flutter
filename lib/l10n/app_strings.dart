@@ -228,6 +228,8 @@ class AppStrings {
   String get familiesInterested =>
       isAmharic ? 'ቤተሰቦች ይቀጥሩዎት ፍላጎት አላቸው' : 'Families interested in hiring you';
   String get typeMessage => isAmharic ? 'መልዕክት ይጻፉ…' : 'Type a message…';
+  String get noMessages => isAmharic ? 'ምንም መልዕክቶች የሉም' : 'No messages yet';
+  String get readyToHire => isAmharic ? 'ለቅጥር ዝግጁ ነዎት?' : 'Ready to hire';
 
   // ── Profile ──────────────────────────────────────────────────────────────
   String get aboutMe => isAmharic ? 'ስለ እኔ' : 'About me';

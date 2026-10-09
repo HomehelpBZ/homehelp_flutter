@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../models/housekeeper.dart';
+import '../../services/user_service.dart';
 import '../family/browse_screen.dart';
 
 class ReviewFlowScreen extends StatefulWidget {
@@ -19,11 +21,34 @@ class _ReviewFlowScreenState extends State<ReviewFlowScreen> {
   bool? _wouldHireAgain;
   final Set<int> _selectedTagIndexes = {};
   final _reviewController = TextEditingController();
+  bool _submitting = false;
+  final _svc = UserService();
 
   @override
   void dispose() {
     _reviewController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submitReview(s) async {
+    setState(() => _submitting = true);
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final tags = s.tagOptions as List<String>;
+      final selectedTags = _selectedTagIndexes.map((i) => tags[i]).toList();
+      await _svc.submitReview(
+        hkUid: widget.hk.id,
+        familyUid: uid,
+        familyName: '',
+        starRating: _starRating,
+        wouldHireAgain: _wouldHireAgain,
+        tags: selectedTags,
+        reviewText: _reviewController.text.trim(),
+      );
+      if (mounted) setState(() { _step = 4; _submitting = false; });
+    } catch (_) {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   String _stepTitle(s) {
@@ -246,11 +271,11 @@ class _ReviewFlowScreenState extends State<ReviewFlowScreen> {
         ),
         const SizedBox(height: 20),
         PrimaryButton(
-          label: s.submitReview,
-          onPressed: charCount <= 300 ? () => setState(() => _step = 4) : null,
+          label: _submitting ? s.loading : s.submitReview,
+          onPressed: charCount <= 300 && !_submitting ? () => _submitReview(s) : null,
         ),
         const SizedBox(height: 10),
-        SecondaryButton(label: s.skipAndSubmit, onPressed: () => setState(() => _step = 4)),
+        SecondaryButton(label: s.skipAndSubmit, onPressed: _submitting ? null : () => _submitReview(s)),
         const SizedBox(height: 10),
         SecondaryButton(label: s.backBtn, onPressed: () => setState(() => _step = 2)),
       ],
