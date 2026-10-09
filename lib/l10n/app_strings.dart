@@ -510,6 +510,7 @@ class AppStrings {
   String get trustBadgeFayda => isAmharic ? 'ፋይዳ መታወቂያ' : 'Fayda ID';
   String get trustBadgeGuarantor => isAmharic ? 'ተያዥ' : 'Guarantor';
   String get trustBadgeReviewed => isAmharic ? 'ተገምግሟል' : 'Reviewed';
+  String get verified => isAmharic ? 'ተረጋግጧል' : 'Verified';
   String get alreadyHaveAccount => isAmharic ? 'መለያ አለዎት?' : 'Already have an account?';
 
   // ── Welcome screen sections ───────────────────────────────────────────────

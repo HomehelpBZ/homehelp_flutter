@@ -308,16 +308,17 @@ class HousekeeperIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = LanguageProvider.strings(context);
     return SizedBox(
       height: 120,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _ProfileCard(initials: 'TK', name: 'Tigist K.', area: 'Bole'),
+          _ProfileCard(initials: 'TK', name: 'Tigist K.', area: s.isAmharic ? 'ቦሌ' : 'Bole', verifiedLabel: s.verified),
           const SizedBox(width: 12),
-          _ProfileCard(initials: 'BZ', name: 'Betty Z.', area: 'Kirkos'),
+          _ProfileCard(initials: 'BZ', name: 'Betty Z.', area: s.isAmharic ? 'ቂርቆስ' : 'Kirkos', verifiedLabel: s.verified),
           const SizedBox(width: 12),
-          _ProfileCard(initials: 'MA', name: 'Marta A.', area: 'Yeka'),
+          _ProfileCard(initials: 'MA', name: 'Marta A.', area: s.isAmharic ? 'የካ' : 'Yeka', verifiedLabel: s.verified),
         ],
       ),
     );
@@ -328,8 +329,9 @@ class _ProfileCard extends StatelessWidget {
   final String initials;
   final String name;
   final String area;
+  final String verifiedLabel;
   const _ProfileCard(
-      {required this.initials, required this.name, required this.area});
+      {required this.initials, required this.name, required this.area, required this.verifiedLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +370,7 @@ class _ProfileCard extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Icon(Icons.verified_user, size: 8, color: Colors.greenAccent),
             const SizedBox(width: 2),
-            Text('Verified',
+            Text(verifiedLabel,
                 style: TextStyle(
                     color: Colors.greenAccent.withOpacity(0.9),
                     fontSize: 8)),
