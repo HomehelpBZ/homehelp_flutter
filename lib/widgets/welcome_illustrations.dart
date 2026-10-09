@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/language_provider.dart';
 
 // ── Hero illustration — Ethiopian home ───────────────────────────────────────
 class HeroIllustration extends StatelessWidget {
@@ -232,6 +233,7 @@ class TrustIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = LanguageProvider.strings(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
@@ -243,19 +245,19 @@ class TrustIllustration extends StatelessWidget {
         children: [
           _TrustBadge(
             icon: Icons.badge_outlined,
-            label: 'Fayda ID',
+            label: s.trustBadgeFayda,
             color: const Color(0xFF1A237E),
           ),
           _VerticalDivider(),
           _TrustBadge(
             icon: Icons.people_outline,
-            label: 'Guarantor',
+            label: s.trustBadgeGuarantor,
             color: const Color(0xFF1565C0),
           ),
           _VerticalDivider(),
           _TrustBadge(
             icon: Icons.star_outline,
-            label: 'Reviewed',
+            label: s.trustBadgeReviewed,
             color: const Color(0xFF283593),
           ),
         ],

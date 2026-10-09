@@ -507,6 +507,9 @@ class AppStrings {
   String get trustBadge1 => isAmharic ? 'መታወቂያ ተረጋግጧል' : 'ID Verified';
   String get trustBadge2 => isAmharic ? 'ተያዥ አለ' : 'Guarantor backed';
   String get trustBadge3 => isAmharic ? 'ከፍተኛ ደረጃ' : 'Top rated';
+  String get trustBadgeFayda => isAmharic ? 'ፋይዳ መታወቂያ' : 'Fayda ID';
+  String get trustBadgeGuarantor => isAmharic ? 'ተያዥ' : 'Guarantor';
+  String get trustBadgeReviewed => isAmharic ? 'ተገምግሟል' : 'Reviewed';
   String get alreadyHaveAccount => isAmharic ? 'መለያ አለዎት?' : 'Already have an account?';
 
   // ── Welcome screen sections ───────────────────────────────────────────────

@@ -376,9 +376,10 @@ class _MyJobCardFirestore extends StatelessWidget {
     final jobType = job['jobType'] as String? ?? '';
     final area = job['area'] as String? ?? '';
     final arrangement = job['arrangement'] as String? ?? '';
-    final displayArrangement = arrangement == 'livein' ? 'Live-in'
-        : arrangement == 'liveout' ? 'Live-out'
-        : arrangement == 'either' ? 'Either'
+    final s = LanguageProvider.strings(context);
+    final displayArrangement = arrangement == 'livein' ? s.filterLiveIn
+        : arrangement == 'liveout' ? s.filterLiveOut
+        : arrangement == 'either' ? (s.isAmharic ? 'ሁለቱም' : 'Either')
         : arrangement;
     final salary = job['salary'] as String? ?? '';
     final status = job['status'] as String? ?? 'open';
