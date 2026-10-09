@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../l10n/language_provider.dart';
 
 // ── Hero illustration — Ethiopian home ───────────────────────────────────────
@@ -303,23 +304,82 @@ class _VerticalDivider extends StatelessWidget {
 }
 
 // ── Housekeeper illustration ──────────────────────────────────────────────────
-class HousekeeperIllustration extends StatelessWidget {
+class HousekeeperIllustration extends StatefulWidget {
   const HousekeeperIllustration({super.key});
+
+  @override
+  State<HousekeeperIllustration> createState() => _HousekeeperIllustrationState();
+}
+
+class _HousekeeperIllustrationState extends State<HousekeeperIllustration> {
+  List<Map<String, dynamic>> _hks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('housekeeperProfiles')
+          .where('verificationStatus', isEqualTo: 'approved')
+          .limit(3)
+          .get();
+      if (mounted) {
+        setState(() => _hks = snap.docs.map((d) => d.data()).toList());
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = LanguageProvider.strings(context);
+
+    // Area name translation map
+    final areaMap = {
+      'Bole': 'ቦሌ', 'Kirkos': 'ቂርቆስ', 'Yeka': 'የካ',
+      'Lideta': 'ልደታ', 'Nifas Silk-Lafto': 'ንፋስ ስልክ ላፍቶ',
+      'Akaky Kaliti': 'አቃቂ ቃሊቲ', 'Kolfe Keranio': 'ቆልፌ ቀራኒዮ',
+      'Gulele': 'ጉለሌ', 'Arada': 'አራዳ', 'Addis Ketema': 'አዲስ ከተማ',
+    };
+
+    // Fallback sample data if Firestore empty
+    final displayData = _hks.isNotEmpty ? _hks : [
+      {'fullName': 'Tigist K.', 'region': 'Bole'},
+      {'fullName': 'Betty Z.', 'region': 'Kirkos'},
+      {'fullName': 'Marta A.', 'region': 'Yeka'},
+    ];
+
     return SizedBox(
       height: 120,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _ProfileCard(initials: 'TK', name: 'Tigist K.', area: s.isAmharic ? 'ቦሌ' : 'Bole', verifiedLabel: s.verified),
-          const SizedBox(width: 12),
-          _ProfileCard(initials: 'BZ', name: 'Betty Z.', area: s.isAmharic ? 'ቂርቆስ' : 'Kirkos', verifiedLabel: s.verified),
-          const SizedBox(width: 12),
-          _ProfileCard(initials: 'MA', name: 'Marta A.', area: s.isAmharic ? 'የካ' : 'Yeka', verifiedLabel: s.verified),
-        ],
+        children: displayData.take(3).map((hk) {
+          final fullName = hk['fullName'] as String? ?? '';
+          final region = hk['region'] as String? ?? '';
+          final shortName = fullName.contains(' ')
+              ? '${fullName.split(' ').first} ${fullName.split(' ').last[0]}.'
+              : fullName;
+          final initials = fullName.split(' ')
+              .where((w) => w.isNotEmpty)
+              .take(2)
+              .map((w) => w[0].toUpperCase())
+              .join();
+          final displayArea = s.isAmharic
+              ? (areaMap[region] ?? region)
+              : region;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: _ProfileCard(
+              initials: initials,
+              name: shortName,
+              area: displayArea,
+              verifiedLabel: s.verified,
+            ),
+          );
+        }).toList(),
       ),
     );
   }
