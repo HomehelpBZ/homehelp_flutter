@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_theme.dart';
+import '../../services/user_service.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../welcome_screen.dart';
@@ -26,11 +28,32 @@ class _BrowseScreenState extends State<BrowseScreen> {
   final Set<String> _saved = {};
   List<Map<String, dynamic>> _housekeepers = [];
   bool _isLoading = true;
+  final _svc = UserService();
 
   @override
   void initState() {
     super.initState();
     _loadHousekeepers();
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final ids = await _svc.getFavoriteIds(uid);
+    if (mounted) setState(() => _saved.addAll(ids));
+  }
+
+  Future<void> _toggleSave(String hkId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    if (_saved.contains(hkId)) {
+      await _svc.removeFavorite(uid, hkId);
+      if (mounted) setState(() => _saved.remove(hkId));
+    } else {
+      await _svc.addFavorite(uid, hkId);
+      if (mounted) setState(() => _saved.add(hkId));
+    }
   }
 
   void _loadHousekeepers() async {
@@ -160,10 +183,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           onPressed: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => SavedScreen(
-                                        savedIds: _saved,
-                                        housekeepers: sampleHousekeepers,
-                                      ))),
+                                  builder: (_) => const SavedScreen())),
                         ),
                         IconButton(
                           icon: const Icon(Icons.settings_outlined,
@@ -351,27 +371,41 @@ class _BrowseScreenState extends State<BrowseScreen> {
                                     '';
                             final isSaved = _saved.contains(uid);
 
-                            // Translate skills
+                            // Translate skills (handles both En→Am and Am→En)
                             final enSkills = ['Traditional Ethiopian cooking', 'Modern / international cooking', 'Baking and pastries', 'General house cleaning', 'Laundry and ironing', 'Grocery shopping and errands', 'Childcare / babysitting', 'Caring for elderly'];
                             final amSkills = ['ባህላዊ የኢትዮጵያ ምግብ ማብሰል', 'ዘመናዊ / አለምዓቀፍ ምግብ ማብሰል', 'ዳቦ ማዘጋጀት', 'ቤት ማጽዳት', 'ልብስ ማጠብ እና ማደርያ', 'ገበያ ወጥቶ ማምጣት', 'ህፃናት ተንከባካቢ', 'አረጋውያን ተንከባካቢ'];
                             final translatedSkills = skills.map((sk) {
-                              final idx = enSkills.indexOf(sk);
-                              if (s.isAmharic && idx >= 0 && idx < amSkills.length) return amSkills[idx];
+                              final skT = sk.trim();
+                              final enIdx = enSkills.indexWhere((e) => e.trim() == skT);
+                              final amIdx = amSkills.indexWhere((e) => e.trim() == skT);
+                              if (s.isAmharic && enIdx >= 0) return amSkills[enIdx];
+                              if (!s.isAmharic && amIdx >= 0) return enSkills[amIdx];
                               return sk;
                             }).toList();
 
-                            // Translate experience
+                            // Translate experience (handles both directions)
                             final enExp = ['No experience', 'Less than 1 year', '1 – 3 years', '4 – 6 years', '7+ years'];
                             final amExp = ['ልምድ የለም', 'ከ1 ዓመት በታች', '1 – 3 ዓመት', '4 – 6 ዓመት', '7+ ዓመት'];
-                            final expIdx = enExp.indexOf(experience);
-                            final displayExperience = s.isAmharic && expIdx >= 0 ? amExp[expIdx] : experience;
+                            final expTrimmed = experience.trim();
+                            final enExpIdx = enExp.indexWhere((e) => e.trim() == expTrimmed);
+                            final amExpIdx = amExp.indexWhere((e) => e.trim() == expTrimmed);
+                            final displayExperience = s.isAmharic && enExpIdx >= 0
+                                ? amExp[enExpIdx]
+                                : !s.isAmharic && amExpIdx >= 0
+                                    ? enExp[amExpIdx]
+                                    : experience;
 
                             // Translate area names
                             final enAreas = ['Bole', 'Kirkos', 'Lideta', 'Yeka', 'Arada', 'Addis Ketema', 'Gulele', 'Kolfe Keranio', 'Nifas Silk-Lafto', 'Akaky Kaliti', 'Lemi Kura'];
                             final amAreas = ['ቦሌ', 'ቅርቆስ', 'ልደታ', 'የካ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ', 'ለሚ ኩራ'];
                             final firstArea = areas.isNotEmpty ? areas.first : region;
-                            final areaIdx = enAreas.indexOf(firstArea);
-                            final displayArea = s.isAmharic && areaIdx >= 0 ? amAreas[areaIdx] : firstArea;
+                            final enAreaIdx = enAreas.indexOf(firstArea);
+                            final amAreaIdx = amAreas.indexOf(firstArea);
+                            final displayArea = s.isAmharic && enAreaIdx >= 0
+                                ? amAreas[enAreaIdx]
+                                : !s.isAmharic && amAreaIdx >= 0
+                                    ? enAreas[amAreaIdx]
+                                    : firstArea;
 
                             return _HkFirestoreCard(
                               uid: uid,
@@ -387,11 +421,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                               experience: experience,
                               isSaved: isSaved,
                               birrLabel: s.birrPerMonth,
-                              onSaveToggle: () => setState(() {
-                                isSaved
-                                    ? _saved.remove(uid)
-                                    : _saved.add(uid);
-                              }),
+                              onSaveToggle: () => _toggleSave(uid),
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -510,7 +540,7 @@ class _HkFirestoreCard extends StatelessWidget {
                       ? Icons.favorite
                       : Icons.favorite_border,
                   color:
-                      isSaved ? Colors.red : AppTheme.grey200,
+                      isSaved ? Colors.red : AppTheme.grey400,
                   size: 22,
                 ),
               ),

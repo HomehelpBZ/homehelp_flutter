@@ -458,15 +458,15 @@ class UserService {
   }
 
   Future<void> addFavorite(String familyUid, String hkUid) async {
-    await _db.collection('familyProfiles').doc(familyUid).update({
+    await _db.collection('familyProfiles').doc(familyUid).set({
       'favoriteHousekeepers': FieldValue.arrayUnion([hkUid]),
-    });
+    }, SetOptions(merge: true));
   }
 
   Future<void> removeFavorite(String familyUid, String hkUid) async {
-    await _db.collection('familyProfiles').doc(familyUid).update({
+    await _db.collection('familyProfiles').doc(familyUid).set({
       'favoriteHousekeepers': FieldValue.arrayRemove([hkUid]),
-    });
+    }, SetOptions(merge: true));
   }
 
   Future<List<Map<String, dynamic>>> getFavoriteHks(String familyUid) async {
