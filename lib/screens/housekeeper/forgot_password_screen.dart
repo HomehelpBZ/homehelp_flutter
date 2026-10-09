@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
+import '../../services/auth_service.dart';
 import 'hk_signin_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -24,6 +26,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _showPw2 = false;
   int _resendSeconds = 30;
   Timer? _timer;
+  bool _loading = false;
+  String? _errorMsg;
+  String? _verificationId;
+  final _authService = AuthService();
 
   void _startTimer() {
     _timer?.cancel();
@@ -32,6 +38,52 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (_resendSeconds == 0) t.cancel();
       else setState(() => _resendSeconds--);
     });
+  }
+
+  Future<void> _sendOtp() async {
+    final phone = _phoneController.text.trim();
+    if (phone.length < 9) return;
+    final normalized = phone.startsWith('0') ? phone : '0$phone';
+    final fullPhone = '+251${normalized.substring(1)}';
+    setState(() { _loading = true; _errorMsg = null; });
+    await _authService.sendPhoneOtp(
+      phoneNumber: fullPhone,
+      onCodeSent: (vId) {
+        if (mounted) setState(() { _verificationId = vId; _step = 1; _loading = false; });
+        _startTimer();
+      },
+      onError: (msg) {
+        if (mounted) setState(() { _errorMsg = msg; _loading = false; });
+      },
+    );
+  }
+
+  Future<void> _verifyOtp() async {
+    final code = _otpControllers.map((c) => c.text).join();
+    if (code.length < 4 || _verificationId == null) return;
+    setState(() { _loading = true; _errorMsg = null; });
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: code,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      if (mounted) setState(() { _step = 2; _loading = false; });
+    } on FirebaseAuthException catch (e) {
+      if (mounted) setState(() { _errorMsg = e.message; _loading = false; });
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    setState(() { _loading = true; _errorMsg = null; });
+    try {
+      await user.updatePassword(_pw1Controller.text);
+      if (mounted) setState(() { _step = 3; _loading = false; });
+    } on FirebaseAuthException catch (e) {
+      if (mounted) setState(() { _errorMsg = e.message; _loading = false; });
+    }
   }
 
   @override
@@ -130,13 +182,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           decoration: InputDecoration(hintText: s.phoneHint, counterText: ''),
         ),
         const SizedBox(height: 20),
+        if (_errorMsg != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(_errorMsg!, style: const TextStyle(fontSize: 12, color: AppTheme.red)),
+          ),
         PrimaryButton(
-          label: s.sendVerificationCode,
-          onPressed: () {
-            if (_phoneController.text.length < 10) return;
-            setState(() => _step = 1);
-            _startTimer();
-          },
+          label: _loading ? s.loading : s.sendVerificationCode,
+          onPressed: _loading ? null : _sendOtp,
         ),
         const SizedBox(height: 10),
         SecondaryButton(label: s.backToSignIn, onPressed: () => Navigator.pop(context)),
@@ -187,23 +240,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 style: const TextStyle(fontSize: 12, color: AppTheme.grey600)),
             if (_resendSeconds == 0)
               TextButton(
-                onPressed: _startTimer,
+                onPressed: _sendOtp,
                 style: TextButton.styleFrom(foregroundColor: AppTheme.primary, padding: EdgeInsets.zero),
                 child: Text(s.resendCode, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
               ),
           ],
         ),
         const SizedBox(height: 16),
+        if (_errorMsg != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(_errorMsg!, style: const TextStyle(fontSize: 12, color: AppTheme.red)),
+          ),
         PrimaryButton(
-          label: s.verify,
-          onPressed: () {
-            final code = _otpControllers.map((c) => c.text).join();
-            if (code.length < 4) return;
-            setState(() => _step = 2);
-          },
+          label: _loading ? s.loading : s.verify,
+          onPressed: _loading ? null : _verifyOtp,
         ),
         const SizedBox(height: 10),
-        SecondaryButton(label: s.changePhone, onPressed: () => setState(() => _step = 0)),
+        SecondaryButton(label: s.changePhone, onPressed: () => setState(() { _step = 0; _errorMsg = null; })),
       ],
     );
   }
@@ -259,9 +313,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Text(s.passwordsMismatch, style: const TextStyle(fontSize: 11, color: AppTheme.red)),
         ]),
         const SizedBox(height: 20),
+        if (_errorMsg != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(_errorMsg!, style: const TextStyle(fontSize: 12, color: AppTheme.red)),
+          ),
         PrimaryButton(
-          label: s.saveNewPassword,
-          onPressed: match && _pw1Controller.text.length >= 8 ? () => setState(() => _step = 3) : null,
+          label: _loading ? s.loading : s.saveNewPassword,
+          onPressed: match && _pw1Controller.text.length >= 8 && !_loading ? _resetPassword : null,
         ),
       ],
     );

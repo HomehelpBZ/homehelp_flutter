@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../l10n/language_provider.dart';
 
 // ── Hero illustration — Ethiopian home ───────────────────────────────────────
 class HeroIllustration extends StatelessWidget {
@@ -90,15 +92,48 @@ class _HeroPainter extends CustomPainter {
       );
     }
 
-    // Trees
-    final treePaint = Paint()..color = Colors.white.withOpacity(0.4);
-    for (final x in [w * 0.05, w * 0.95]) {
+    // Ethiopian flag on house wall (green/yellow/red horizontal bands)
+    final flagLeft = w * 0.28;
+    final flagTop = h * 0.47;
+    final flagW = w * 0.18;
+    final flagH = h * 0.09;
+    final bandH = flagH / 3;
+    canvas.drawRect(Rect.fromLTWH(flagLeft, flagTop, flagW, bandH),
+        Paint()..color = const Color(0xFF078930).withOpacity(0.85)); // green
+    canvas.drawRect(Rect.fromLTWH(flagLeft, flagTop + bandH, flagW, bandH),
+        Paint()..color = const Color(0xFFFCDD09).withOpacity(0.85)); // yellow
+    canvas.drawRect(Rect.fromLTWH(flagLeft, flagTop + bandH * 2, flagW, bandH),
+        Paint()..color = const Color(0xFFDA121A).withOpacity(0.85)); // red
+    // Blue circle in center of flag
+    canvas.drawCircle(
+      Offset(flagLeft + flagW / 2, flagTop + flagH / 2),
+      bandH * 0.8,
+      Paint()..color = const Color(0xFF0F47AF).withOpacity(0.9),
+    );
+
+    // Trees (fuller, triangle style)
+    final treePaint = Paint()..color = Colors.white.withOpacity(0.5);
+    for (final x in [w * 0.06, w * 0.94]) {
       final base = Offset(x, h * 0.75);
+      // Trunk
+      canvas.drawRect(
+        Rect.fromLTWH(base.dx - 3, base.dy - 8, 6, 8),
+        Paint()..color = Colors.white.withOpacity(0.3),
+      );
+      // Three layered triangles for fuller tree look
       canvas.drawPath(
         Path()
-          ..moveTo(base.dx, base.dy)
-          ..lineTo(base.dx - 12, base.dy)
-          ..lineTo(base.dx, base.dy - 30)
+          ..moveTo(base.dx, base.dy - 38)
+          ..lineTo(base.dx - 16, base.dy - 10)
+          ..lineTo(base.dx + 16, base.dy - 10)
+          ..close(),
+        treePaint,
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(base.dx, base.dy - 28)
+          ..lineTo(base.dx - 18, base.dy - 2)
+          ..lineTo(base.dx + 18, base.dy - 2)
           ..close(),
         treePaint,
       );
@@ -232,6 +267,7 @@ class TrustIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = LanguageProvider.strings(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
@@ -243,19 +279,19 @@ class TrustIllustration extends StatelessWidget {
         children: [
           _TrustBadge(
             icon: Icons.badge_outlined,
-            label: 'Fayda ID',
+            label: s.trustBadgeFayda,
             color: const Color(0xFF1A237E),
           ),
           _VerticalDivider(),
           _TrustBadge(
             icon: Icons.people_outline,
-            label: 'Guarantor',
+            label: s.trustBadgeGuarantor,
             color: const Color(0xFF1565C0),
           ),
           _VerticalDivider(),
           _TrustBadge(
             icon: Icons.star_outline,
-            label: 'Reviewed',
+            label: s.trustBadgeReviewed,
             color: const Color(0xFF283593),
           ),
         ],
@@ -301,22 +337,88 @@ class _VerticalDivider extends StatelessWidget {
 }
 
 // ── Housekeeper illustration ──────────────────────────────────────────────────
-class HousekeeperIllustration extends StatelessWidget {
+class HousekeeperIllustration extends StatefulWidget {
   const HousekeeperIllustration({super.key});
 
   @override
+  State<HousekeeperIllustration> createState() => _HousekeeperIllustrationState();
+}
+
+class _HousekeeperIllustrationState extends State<HousekeeperIllustration> {
+  List<Map<String, dynamic>> _hks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      // Query approved HKs from Addis Ababa sub-cities only
+      final addisAreas = [
+        'Bole', 'Kirkos', 'Yeka', 'Lideta', 'Nifas Silk-Lafto',
+        'Akaky Kaliti', 'Kolfe Keranio', 'Gulele', 'Arada', 'Addis Ketema',
+      ];
+      final snap = await FirebaseFirestore.instance
+          .collection('housekeeperProfiles')
+          .where('verificationStatus', isEqualTo: 'approved')
+          .where('region', whereIn: addisAreas)
+          .limit(3)
+          .get();
+      if (mounted) {
+        setState(() => _hks = snap.docs.map((d) => d.data()).toList());
+      }
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final s = LanguageProvider.strings(context);
+
+    // Area name translation map
+    final areaMap = {
+      'Bole': 'ቦሌ', 'Kirkos': 'ቂርቆስ', 'Yeka': 'የካ',
+      'Lideta': 'ልደታ', 'Nifas Silk-Lafto': 'ንፋስ ስልክ ላፍቶ',
+      'Akaky Kaliti': 'አቃቂ ቃሊቲ', 'Kolfe Keranio': 'ቆልፌ ቀራኒዮ',
+      'Gulele': 'ጉለሌ', 'Arada': 'አራዳ', 'Addis Ketema': 'አዲስ ከተማ',
+    };
+
+    // Fallback sample data if Firestore empty
+    final displayData = _hks.isNotEmpty ? _hks : [
+      {'fullName': 'Tigist K.', 'region': 'Bole'},
+      {'fullName': 'Betty Z.', 'region': 'Kirkos'},
+      {'fullName': 'Marta A.', 'region': 'Yeka'},
+    ];
+
     return SizedBox(
-      height: 120,
+      height: 145,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _ProfileCard(initials: 'TK', name: 'Tigist K.', area: 'Bole'),
-          const SizedBox(width: 12),
-          _ProfileCard(initials: 'BZ', name: 'Betty Z.', area: 'Kirkos'),
-          const SizedBox(width: 12),
-          _ProfileCard(initials: 'MA', name: 'Marta A.', area: 'Yeka'),
-        ],
+        children: displayData.take(3).map((hk) {
+          final fullName = hk['fullName'] as String? ?? '';
+          final region = hk['region'] as String? ?? '';
+          final shortName = fullName.contains(' ')
+              ? '${fullName.split(' ').first} ${fullName.split(' ').last[0]}.'
+              : fullName;
+          final initials = fullName.split(' ')
+              .where((w) => w.isNotEmpty)
+              .take(2)
+              .map((w) => w[0].toUpperCase())
+              .join();
+          final displayArea = s.isAmharic
+              ? (areaMap[region] ?? region)
+              : region;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: _ProfileCard(
+              initials: initials,
+              name: shortName,
+              area: displayArea,
+              verifiedLabel: s.verified,
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -326,24 +428,26 @@ class _ProfileCard extends StatelessWidget {
   final String initials;
   final String name;
   final String area;
+  final String verifiedLabel;
   const _ProfileCard(
-      {required this.initials, required this.name, required this.area});
+      {required this.initials, required this.name, required this.area, required this.verifiedLabel});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 80,
-      padding: const EdgeInsets.all(10),
+      width: 88,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
-            radius: 20,
+            radius: 18,
             backgroundColor: Colors.white.withOpacity(0.9),
             child: Text(initials,
                 style: const TextStyle(
@@ -351,7 +455,7 @@ class _ProfileCard extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w700)),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(name,
               style: const TextStyle(
                   color: Colors.white,
@@ -362,11 +466,11 @@ class _ProfileCard extends StatelessWidget {
               style: TextStyle(
                   color: Colors.white.withOpacity(0.6), fontSize: 9),
               textAlign: TextAlign.center),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             const Icon(Icons.verified_user, size: 8, color: Colors.greenAccent),
             const SizedBox(width: 2),
-            Text('Verified',
+            Text(verifiedLabel,
                 style: TextStyle(
                     color: Colors.greenAccent.withOpacity(0.9),
                     fontSize: 8)),

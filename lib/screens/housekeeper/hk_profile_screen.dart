@@ -68,6 +68,13 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
     final name = p['fullName'] as String? ?? '';
     final region = p['region'] as String? ?? '';
     final arrangement = p['availability']?['arrangement'] as String? ?? '';
+    final displayArrangement = arrangement == 'livein'
+        ? s.filterLiveIn
+        : arrangement == 'liveout'
+            ? s.filterLiveOut
+            : arrangement == 'either'
+                ? (s.isAmharic ? 'ሁለቱም' : 'Either')
+                : arrangement;
     final skills = (p['skills'] as List?)?.cast<String>() ?? [];
     final languages = (p['languages'] as List?)?.cast<String>() ?? [];
     final jobTypes = (p['jobTypes'] as List?)?.cast<String>() ?? [];
@@ -155,7 +162,7 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                                     fontWeight:
                                         FontWeight.w500)),
                             Text(
-                                '${arrangement.isNotEmpty ? arrangement : ''} · $region',
+                                '${displayArrangement.isNotEmpty ? displayArrangement : ''} · $region',
                                 style: const TextStyle(
                                     color: Color(0xAAFFFFFF),
                                     fontSize: 12)),
@@ -436,7 +443,7 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                       if (arrangement.isNotEmpty)
                         InfoRow(
                             label: s.workArrangementLabel,
-                            value: arrangement),
+                            value: displayArrangement),
                       if (jobTypes.isNotEmpty) ...[
                         const Divider(height: 0),
                         InfoRow(

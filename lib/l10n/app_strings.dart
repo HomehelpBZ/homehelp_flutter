@@ -228,6 +228,8 @@ class AppStrings {
   String get familiesInterested =>
       isAmharic ? 'ቤተሰቦች ይቀጥሩዎት ፍላጎት አላቸው' : 'Families interested in hiring you';
   String get typeMessage => isAmharic ? 'መልዕክት ይጻፉ…' : 'Type a message…';
+  String get noMessages => isAmharic ? 'ምንም መልዕክቶች የሉም' : 'No messages yet';
+  String get readyToHire => isAmharic ? 'ለቅጥር ዝግጁ ነዎት?' : 'Ready to hire';
 
   // ── Profile ──────────────────────────────────────────────────────────────
   String get aboutMe => isAmharic ? 'ስለ እኔ' : 'About me';
@@ -507,6 +509,10 @@ class AppStrings {
   String get trustBadge1 => isAmharic ? 'መታወቂያ ተረጋግጧል' : 'ID Verified';
   String get trustBadge2 => isAmharic ? 'ተያዥ አለ' : 'Guarantor backed';
   String get trustBadge3 => isAmharic ? 'ከፍተኛ ደረጃ' : 'Top rated';
+  String get trustBadgeFayda => isAmharic ? 'ፋይዳ መታወቂያ' : 'Fayda ID';
+  String get trustBadgeGuarantor => isAmharic ? 'ተያዥ' : 'Guarantor';
+  String get trustBadgeReviewed => isAmharic ? 'ተገምግሟል' : 'Reviewed';
+  String get verified => isAmharic ? 'ተረጋግጧል' : 'Verified';
   String get alreadyHaveAccount => isAmharic ? 'መለያ አለዎት?' : 'Already have an account?';
 
   // ── Welcome screen sections ───────────────────────────────────────────────

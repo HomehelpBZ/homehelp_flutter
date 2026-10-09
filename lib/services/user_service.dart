@@ -449,4 +449,162 @@ class UserService {
     });
   }
 
+  // ── Favorites ─────────────────────────────────────────────────────────────
+  Future<List<String>> getFavoriteIds(String familyUid) async {
+    final doc = await _db.collection('familyProfiles').doc(familyUid).get();
+    final data = doc.data();
+    if (data == null) return [];
+    return List<String>.from(data['favoriteHousekeepers'] ?? []);
+  }
+
+  Future<void> addFavorite(String familyUid, String hkUid) async {
+    await _db.collection('familyProfiles').doc(familyUid).set({
+      'favoriteHousekeepers': FieldValue.arrayUnion([hkUid]),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> removeFavorite(String familyUid, String hkUid) async {
+    await _db.collection('familyProfiles').doc(familyUid).set({
+      'favoriteHousekeepers': FieldValue.arrayRemove([hkUid]),
+    }, SetOptions(merge: true));
+  }
+
+  Future<List<Map<String, dynamic>>> getFavoriteHks(String familyUid) async {
+    final ids = await getFavoriteIds(familyUid);
+    if (ids.isEmpty) return [];
+    final results = <Map<String, dynamic>>[];
+    // Firestore whereIn supports max 10 per query
+    for (var i = 0; i < ids.length; i += 10) {
+      final chunk = ids.sublist(i, i + 10 > ids.length ? ids.length : i + 10);
+      final snap = await _db
+          .collection('housekeeperProfiles')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      for (final doc in snap.docs) {
+        results.add({'id': doc.id, ...doc.data()});
+      }
+    }
+    return results;
+  }
+
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  Future<void> submitReview({
+    required String hkUid,
+    required String familyUid,
+    required String familyName,
+    required int starRating,
+    required bool? wouldHireAgain,
+    required List<String> tags,
+    required String reviewText,
+  }) async {
+    final ref = _db.collection('reviews').doc();
+    await ref.set({
+      'hkUid': hkUid,
+      'familyUid': familyUid,
+      'familyName': familyName,
+      'starRating': starRating,
+      'wouldHireAgain': wouldHireAgain,
+      'tags': tags,
+      'reviewText': reviewText,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    // Update HK profile with new average rating
+    final existing = await _db.collection('reviews')
+        .where('hkUid', isEqualTo: hkUid).get();
+    final ratings = existing.docs
+        .map((d) => (d.data()['starRating'] as num).toDouble())
+        .toList();
+    if (ratings.isNotEmpty) {
+      final avg = ratings.reduce((a, b) => a + b) / ratings.length;
+      await _db.collection('housekeeperProfiles').doc(hkUid).update({
+        'rating': double.parse(avg.toStringAsFixed(1)),
+        'reviewCount': ratings.length,
+      });
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getHkReviews(String hkUid) async {
+    final snap = await _db.collection('reviews')
+        .where('hkUid', isEqualTo: hkUid)
+        .get();
+    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+  }
+
+  // ── Messaging ─────────────────────────────────────────────────────────────
+  String _chatId(String familyUid, String hkUid) {
+    final ids = [familyUid, hkUid]..sort();
+    return '${ids[0]}_${ids[1]}';
+  }
+
+  Future<void> sendMessage({
+    required String familyUid,
+    required String hkUid,
+    required String senderUid,
+    required String text,
+  }) async {
+    final chatId = _chatId(familyUid, hkUid);
+    final batch = _db.batch();
+    // Add message
+    final msgRef = _db.collection('chats').doc(chatId).collection('messages').doc();
+    batch.set(msgRef, {
+      'senderUid': senderUid,
+      'text': text,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    // Update chat thread metadata
+    final chatRef = _db.collection('chats').doc(chatId);
+    batch.set(chatRef, {
+      'familyUid': familyUid,
+      'hkUid': hkUid,
+      'lastMessage': text,
+      'lastMessageAt': FieldValue.serverTimestamp(),
+      'unreadFamily': senderUid == hkUid ? FieldValue.increment(1) : 0,
+      'unreadHk': senderUid == familyUid ? FieldValue.increment(1) : 0,
+    }, SetOptions(merge: true));
+    await batch.commit();
+  }
+
+  Stream<QuerySnapshot> getMessages(String familyUid, String hkUid) {
+    final chatId = _chatId(familyUid, hkUid);
+    return _db
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .orderBy('createdAt')
+        .snapshots();
+  }
+
+  Future<List<Map<String, dynamic>>> getFamilyChats(String familyUid) async {
+    final snap = await _db.collection('chats')
+        .where('familyUid', isEqualTo: familyUid)
+        .orderBy('lastMessageAt', descending: true)
+        .get();
+    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getHkChats(String hkUid) async {
+    final snap = await _db.collection('chats')
+        .where('hkUid', isEqualTo: hkUid)
+        .orderBy('lastMessageAt', descending: true)
+        .get();
+    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+  }
+
+  Future<void> markChatRead(String familyUid, String hkUid, bool isFamily) async {
+    final chatId = _chatId(familyUid, hkUid);
+    await _db.collection('chats').doc(chatId).update({
+      isFamily ? 'unreadFamily' : 'unreadHk': 0,
+    });
+  }
+
+  // ── Password reset ────────────────────────────────────────────────────────
+  Future<void> updatePassword(String uid, String newPassword) async {
+    // Password is stored as email/password auth — update via Firebase Auth
+    // Called after OTP verification confirms identity
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await user.updatePassword(newPassword);
+    }
+  }
+
 }
