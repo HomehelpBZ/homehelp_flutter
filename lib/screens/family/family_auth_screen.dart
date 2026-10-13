@@ -281,6 +281,7 @@ class _FamilySignUpScreenState extends State<_FamilySignUpScreen> {
 
     await _authService.sendPhoneOtp(
       phoneNumber: formattedPhone,
+      strings: LanguageProvider.strings(context),
       onCodeSent: (verificationId) {
         if (mounted) {
           setState(() => _isLoading = false);
@@ -596,7 +597,7 @@ class _FamilySignInScreenState extends State<FamilySignInScreen> {
     } catch (e) {
       setState(() {
         _errorMessage =
-            'Phone number or password is incorrect. Please try again.';
+            LanguageProvider.strings(context).errWrongPhoneOrPassword;
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);

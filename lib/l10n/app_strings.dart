@@ -65,10 +65,51 @@ class AppStrings {
   String get noAccount => isAmharic ? 'መለያ የለህም?' : "don't have an account?";
   String get createNewProfile => isAmharic ? 'አዲስ መገለጫ ፍጠር' : 'Create a new profile';
 
+  // ── Auth errors ──────────────────────────────────────────────────────────
+  String get errWrongPhoneOrPassword => isAmharic
+      ? 'ስልክ ቁጥሩ ወይም የይለፍ ቃሉ ትክክል አይደለም። እባክዎ እንደገና ይሞክሩ።'
+      : 'Phone number or password is incorrect. Please try again.';
+  String get errIncorrectCode => isAmharic
+      ? 'የተሳሳተ ኮድ። እባክዎ ያረጋግጡና እንደገና ይሞክሩ።'
+      : 'Incorrect code. Please check and try again.';
+  String get errCodeExpired => isAmharic
+      ? 'ይህ ኮድ ጊዜው አልፎበታል። እባክዎ አዲስ ኮድ ይጠይቁ።'
+      : 'This code has expired. Please request a new one.';
+  String get errAccountExists => isAmharic
+      ? 'በዚህ ስልክ ቁጥር መለያ አስቀድሞ አለ። እባክዎ ይግቡ።'
+      : 'An account with this phone number already exists. Please sign in instead.';
+  String get errNoAccount => isAmharic
+      ? 'ለዚህ ስልክ ቁጥር መለያ አልተገኘም። እባክዎ ይመዝገቡ።'
+      : 'No account found for this phone number. Please sign up instead.';
+  String get errWeakPassword => isAmharic
+      ? 'የይለፍ ቃሉ ደካማ ነው። እባክዎ ጠንካራ የይለፍ ቃል ይምረጡ።'
+      : 'Password is too weak. Please choose a stronger one.';
+  String get errTooManyAttempts => isAmharic
+      ? 'በጣም ብዙ ሙከራዎች። እባክዎ ጥቂት ደቂቃዎች ጠብቀው እንደገና ይሞክሩ።'
+      : 'Too many attempts. Please wait a few minutes and try again.';
+  String get errNoInternet => isAmharic
+      ? 'የኢንተርኔት ግንኙነት የለም። እባክዎ ኔትወርክዎን ያረጋግጡ።'
+      : 'No internet connection. Please check your network.';
+  String get errInvalidPhone => isAmharic
+      ? 'ልክ ያልሆነ ስልክ ቁጥር። እባክዎ ትክክለኛ የኢትዮጵያ ቁጥር ያስገቡ።'
+      : 'Invalid phone number. Please enter a valid Ethiopian number.';
+  String get errSmsQuota => isAmharic
+      ? 'የኤስኤምኤስ ገደብ ተሟልቷል። እባክዎ ቆይተው እንደገና ይሞክሩ።'
+      : 'SMS quota exceeded. Please try again later.';
+  String get errSendCodeFailed => isAmharic
+      ? 'የማረጋገጫ ኮድ መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።'
+      : 'Failed to send verification code. Please try again.';
+  String get errProfileSaveFailed => isAmharic
+      ? 'መለያዎ ተፈጥሯል፣ ነገር ግን መገለጫዎን ማስቀመጥ አልተቻለም። ግንኙነትዎን ያረጋግጡና እንደገና ለመሞከር "አረጋግጥ"ን ይጫኑ።'
+      : "Your account was created, but we couldn't save your profile. Check your connection and tap Verify to try again.";
+  String get errGeneric => isAmharic
+      ? 'የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።'
+      : 'Something went wrong. Please try again.';
+
   // ── Forgot password ──────────────────────────────────────────────────────
   String get forgotTitle => isAmharic ? 'የይለፍ ቃል ረሱ?' : 'Forgot your password?';
   String get forgotSubtitle =>
-      isAmharic ? 'የተመዘገበ ስልክ ቁጥርዎን ያስገቡ። 4 አሃዝ ኮድ በኤስኤምኤስ እንልካለን።' : "Enter your registered phone number. We'll send a 4-digit code by SMS.";
+      isAmharic ? 'የተመዘገበ ስልክ ቁጥርዎን ያስገቡ። 6 አሃዝ ኮድ በኤስኤምኤስ እንልካለን።' : "Enter your registered phone number. We'll send a 6-digit code by SMS.";
   String get sendVerificationCode => isAmharic ? 'የማረጋገጫ ኮድ ላክ →' : 'Send verification code →';
   String get backToSignIn => isAmharic ? '← ወደ ግባ ተመለስ' : '← Back to sign in';
   String get enterCode => isAmharic ? 'ኮዱን ያስገቡ' : 'Enter the code';

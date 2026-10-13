@@ -43,6 +43,7 @@ class _OtpScreenState extends State<OtpScreen> {
   int _resendSeconds = 60;
   Timer? _timer;
   late String _currentVerificationId;
+  String? _createdUid;
 
   @override
   void initState() {
@@ -84,16 +85,33 @@ class _OtpScreenState extends State<OtpScreen> {
       _errorMessage = null;
     });
 
-    try {
-      // Step 1: Verify OTP and create Firebase Auth account
-      final result = await _authService.verifyOtpAndSignUp(
-        verificationId: _currentVerificationId,
-        smsCode: _otpController.text,
-        phone: widget.phoneNumber,
-        password: widget.password,
-      );
+    // Step 1: Verify OTP and create Firebase Auth account. Skipped on retry
+    // if the account was created but saving the profile failed, since the
+    // code has already been used.
+    if (_createdUid == null) {
+      try {
+        final result = await _authService.verifyOtpAndSignUp(
+          verificationId: _currentVerificationId,
+          smsCode: _otpController.text,
+          phone: widget.phoneNumber,
+          password: widget.password,
+        );
+        _createdUid = result.user?.uid;
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = _authService.friendlyVerifyError(e, LanguageProvider.strings(context));
+            _isLoading = false;
+            _otpController.clear();
+          });
+          _focusNode.requestFocus();
+        }
+        return;
+      }
+    }
 
-      final uid = result.user?.uid;
+    try {
+      final uid = _createdUid;
 
       if (uid != null) {
         // Step 2: Save user document to Firestore
@@ -128,11 +146,13 @@ class _OtpScreenState extends State<OtpScreen> {
         );
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Incorrect code. Please check and try again.';
-        _otpController.clear();
-      });
-      _focusNode.requestFocus();
+      // The account exists; keep the code so Verify can retry the save.
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              LanguageProvider.strings(context).errProfileSaveFailed;
+        });
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -147,8 +167,10 @@ class _OtpScreenState extends State<OtpScreen> {
     _focusNode.requestFocus();
 
     await _authService.sendPhoneOtp(
-      phoneNumber: '+251${widget.phoneNumber.substring(1)}',
+      phoneNumber: _authService.toE164(widget.phoneNumber),
+      strings: LanguageProvider.strings(context),
       onCodeSent: (verificationId) {
+        if (!mounted) return;
         setState(() {
           _currentVerificationId = verificationId;
           _isResending = false;
@@ -156,6 +178,7 @@ class _OtpScreenState extends State<OtpScreen> {
         _startTimer();
       },
       onError: (error) {
+        if (!mounted) return;
         setState(() {
           _errorMessage = error;
           _isResending = false;

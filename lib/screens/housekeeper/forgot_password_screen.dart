@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
@@ -18,8 +17,8 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   int _step = 0;
   final _phoneController = TextEditingController();
-  final List<TextEditingController> _otpControllers = List.generate(4, (_) => TextEditingController());
-  final List<FocusNode> _otpFocusNodes = List.generate(4, (_) => FocusNode());
+  final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
   final _pw1Controller = TextEditingController();
   final _pw2Controller = TextEditingController();
   bool _showPw1 = false;
@@ -36,18 +35,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _resendSeconds = 30);
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_resendSeconds == 0) t.cancel();
-      else setState(() => _resendSeconds--);
+      else if (mounted) setState(() => _resendSeconds--);
     });
   }
 
   Future<void> _sendOtp() async {
     final phone = _phoneController.text.trim();
     if (phone.length < 9) return;
-    final normalized = phone.startsWith('0') ? phone : '0$phone';
-    final fullPhone = '+251${normalized.substring(1)}';
+    final fullPhone = _authService.toE164(phone);
     setState(() { _loading = true; _errorMsg = null; });
     await _authService.sendPhoneOtp(
       phoneNumber: fullPhone,
+      strings: LanguageProvider.strings(context),
       onCodeSent: (vId) {
         if (mounted) setState(() { _verificationId = vId; _step = 1; _loading = false; });
         _startTimer();
@@ -60,29 +59,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _verifyOtp() async {
     final code = _otpControllers.map((c) => c.text).join();
-    if (code.length < 4 || _verificationId == null) return;
+    if (code.length < 6 || _verificationId == null) return;
     setState(() { _loading = true; _errorMsg = null; });
     try {
-      final credential = PhoneAuthProvider.credential(
+      await _authService.verifyOtpForPasswordReset(
         verificationId: _verificationId!,
         smsCode: code,
       );
-      await FirebaseAuth.instance.signInWithCredential(credential);
       if (mounted) setState(() { _step = 2; _loading = false; });
-    } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() { _errorMsg = e.message; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _errorMsg = _authService.friendlyVerifyError(e, LanguageProvider.strings(context)); _loading = false; });
     }
   }
 
   Future<void> _resetPassword() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
     setState(() { _loading = true; _errorMsg = null; });
     try {
-      await user.updatePassword(_pw1Controller.text);
+      await _authService.resetPassword(_pw1Controller.text);
       if (mounted) setState(() { _step = 3; _loading = false; });
-    } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() { _errorMsg = e.message; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _errorMsg = _authService.friendlyVerifyError(e, LanguageProvider.strings(context)); _loading = false; });
     }
   }
 
@@ -211,9 +207,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: const TextStyle(fontSize: 13, color: AppTheme.grey600)),
         const SizedBox(height: 24),
         Row(
-          children: List.generate(4, (i) => Expanded(
+          children: List.generate(6, (i) => Expanded(
             child: Container(
-              margin: EdgeInsets.only(right: i < 3 ? 10 : 0),
+              margin: EdgeInsets.only(right: i < 5 ? 8 : 0),
               child: TextFormField(
                 controller: _otpControllers[i],
                 focusNode: _otpFocusNodes[i],
@@ -226,7 +222,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     contentPadding: EdgeInsets.symmetric(vertical: 14)),
                 onChanged: (v) {
                   setState(() {});
-                  if (v.isNotEmpty && i < 3) _otpFocusNodes[i + 1].requestFocus();
+                  if (v.isNotEmpty && i < 5) _otpFocusNodes[i + 1].requestFocus();
                 },
               ),
             ),

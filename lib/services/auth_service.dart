@@ -1,20 +1,34 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import '../l10n/app_strings.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth _auth;
+
+  // `auth` is injectable for tests; the app uses the default instance.
+  AuthService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
 
   // ── Current user ──────────────────────────────────────────────────────────
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // ── Helper: convert phone to fake email ───────────────────────────────────
-  String phoneToEmail(String phone) {
-    final cleaned = phone.trim().replaceAll(' ', '');
-    // Always store with leading 0 for consistency
-    // User enters 9 digits: 911000001 → 0911000001@homehelp.app
-    final normalized = cleaned.startsWith('0') ? cleaned : '0$cleaned';
-    return '$normalized@homehelp.app';
+  // ── Helper: normalize phone to local 0XXXXXXXXX form ──────────────────────
+  // Accepts 911000001, 0911000001, +251911000001, 251 911 000 001, ...
+  String normalizePhone(String phone) {
+    var digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('251') && digits.length == 12) {
+      digits = digits.substring(3);
+    }
+    return digits.startsWith('0') ? digits : '0$digits';
   }
+
+  // ── Helper: phone in international format for SMS ─────────────────────────
+  // 911000001 → +251911000001
+  String toE164(String phone) => '+251${normalizePhone(phone).substring(1)}';
+
+  // ── Helper: convert phone to fake email ───────────────────────────────────
+  // Always store with leading 0 for consistency
+  // User enters 9 digits: 911000001 → 0911000001@homehelp.app
+  String phoneToEmail(String phone) => '${normalizePhone(phone)}@homehelp.app';
 
   // ── Email / Password ──────────────────────────────────────────────────────
   Future<UserCredential> signUpWithEmail({
@@ -42,6 +56,7 @@ class AuthService {
     required String phoneNumber,
     required Function(String verificationId) onCodeSent,
     required Function(String errorMessage) onError,
+    required AppStrings strings,
   }) async {
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
@@ -49,7 +64,7 @@ class AuthService {
         // Auto-verification on Android — not used for signup flow
       },
       verificationFailed: (FirebaseAuthException e) {
-        onError(_friendlyPhoneError(e.code));
+        onError(_friendlyPhoneError(e.code, strings));
       },
       codeSent: (String verificationId, int? resendToken) {
         onCodeSent(verificationId);
@@ -82,14 +97,72 @@ class AuthService {
     try {
       await phoneResult.user?.linkWithCredential(emailCredential);
     } on FirebaseAuthException catch (e) {
-      // If already linked, that's fine
-      if (e.code != 'provider-already-linked' &&
-          e.code != 'email-already-in-use') {
-        rethrow;
+      // Don't leave a half-created, password-less account signed in.
+      await _discardSignIn(phoneResult);
+      // This phone number already has a password account. Treating it as
+      // success would ignore the new password and overwrite the profile.
+      if (e.code == 'provider-already-linked' ||
+          e.code == 'email-already-in-use') {
+        throw FirebaseAuthException(
+          code: accountExistsCode,
+          message: 'An account with this phone number already exists.',
+        );
       }
+      rethrow;
     }
 
     return phoneResult;
+  }
+
+  // Thrown by verifyOtpAndSignUp when the phone number is already registered.
+  static const accountExistsCode = 'account-already-exists';
+
+  // Thrown by verifyOtpForPasswordReset when the phone number has no account.
+  static const noAccountCode = 'no-account-for-phone';
+
+  // ── Password reset — Step 1: verify OTP for an existing account ──────────
+  Future<UserCredential> verifyOtpForPasswordReset({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final result = await verifyPhoneOtp(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    // Signing in with an unregistered phone silently creates a new account.
+    if (result.additionalUserInfo?.isNewUser ?? false) {
+      await _discardSignIn(result);
+      throw FirebaseAuthException(
+        code: noAccountCode,
+        message: 'No account found for this phone number.',
+      );
+    }
+    return result;
+  }
+
+  // ── Password reset — Step 2: set the new password, then sign out ─────────
+  Future<void> resetPassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'session-expired',
+        message: 'Your verification expired. Please start again.',
+      );
+    }
+    await user.updatePassword(newPassword);
+    await _auth.signOut();
+  }
+
+  // Signs out, and deletes the account if this sign-in just created it.
+  Future<void> _discardSignIn(UserCredential result) async {
+    if (result.additionalUserInfo?.isNewUser ?? false) {
+      try {
+        await result.user?.delete();
+      } on FirebaseAuthException {
+        // Best effort — signing out below still ends the session.
+      }
+    }
+    await _auth.signOut();
   }
 
   // ── Phone OTP — Verify only (for sign in with OTP if needed) ─────────────
@@ -110,18 +183,42 @@ class AuthService {
   }
 
   // ── Friendly error messages ───────────────────────────────────────────────
-  String _friendlyPhoneError(String code) {
+  // For failures while verifying a code, signing up, or resetting a password.
+  String friendlyVerifyError(Object error, AppStrings s) {
+    final code = error is FirebaseAuthException ? error.code : '';
+    switch (code) {
+      case 'invalid-verification-code':
+        return s.errIncorrectCode;
+      case 'session-expired':
+      case 'code-expired':
+        return s.errCodeExpired;
+      case accountExistsCode:
+        return s.errAccountExists;
+      case noAccountCode:
+        return s.errNoAccount;
+      case 'weak-password':
+        return s.errWeakPassword;
+      case 'too-many-requests':
+        return s.errTooManyAttempts;
+      case 'network-request-failed':
+        return s.errNoInternet;
+      default:
+        return s.errGeneric;
+    }
+  }
+
+  String _friendlyPhoneError(String code, AppStrings s) {
     switch (code) {
       case 'invalid-phone-number':
-        return 'Invalid phone number. Please enter a valid Ethiopian number.';
+        return s.errInvalidPhone;
       case 'too-many-requests':
-        return 'Too many attempts. Please wait a few minutes and try again.';
+        return s.errTooManyAttempts;
       case 'network-request-failed':
-        return 'No internet connection. Please check your network.';
+        return s.errNoInternet;
       case 'quota-exceeded':
-        return 'SMS quota exceeded. Please try again later.';
+        return s.errSmsQuota;
       default:
-        return 'Failed to send verification code. Please try again.';
+        return s.errSendCodeFailed;
     }
   }
 }

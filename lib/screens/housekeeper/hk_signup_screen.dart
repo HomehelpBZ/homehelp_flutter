@@ -53,6 +53,7 @@ class _HkSignupScreenState extends State<HkSignupScreen> {
 
     await _authService.sendPhoneOtp(
       phoneNumber: formattedPhone,
+      strings: LanguageProvider.strings(context),
       onCodeSent: (verificationId) {
         if (mounted) {
           setState(() => _isLoading = false);

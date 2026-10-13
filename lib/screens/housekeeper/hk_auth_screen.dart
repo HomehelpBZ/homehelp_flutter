@@ -236,6 +236,7 @@ class _HkSignUpScreenState extends State<_HkSignUpScreen> {
 
     await _authService.sendPhoneOtp(
       phoneNumber: formattedPhone,
+      strings: LanguageProvider.strings(context),
       onCodeSent: (verificationId) {
         if (mounted) {
           setState(() => _isLoading = false);
@@ -550,7 +551,7 @@ class _HkSignInScreenState extends State<HkSignInScreen> {
     } catch (e) {
       setState(() {
         _errorMessage =
-            'Phone number or password is incorrect. Please try again.';
+            LanguageProvider.strings(context).errWrongPhoneOrPassword;
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
