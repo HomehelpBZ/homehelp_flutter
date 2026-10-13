@@ -67,22 +67,59 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
     final p = _profile;
     final name = p?['fullName'] as String? ?? widget.hk?.name ?? '';
     final region = p?['region'] as String? ?? '';
-    final areas = (p?['preferredAreas'] as List?)?.cast<String>() ?? [];
-    final location = areas.isNotEmpty ? areas.first : region;
     final rawSkills = (p?['skills'] as List?)?.cast<String>() ?? widget.hk?.skills ?? [];
     const enSkills = ['Traditional Ethiopian cooking', 'Modern / international cooking', 'Baking and pastries', 'General house cleaning', 'Laundry and ironing', 'Grocery shopping and errands', 'Childcare / babysitting', 'Caring for elderly'];
     const amSkills = ['ባህላዊ የኢትዮጵያ ምግብ ማብሰል', 'ዘመናዊ / አለምዓቀፍ ምግብ ማብሰል', 'ዳቦ ማዘጋጀት', 'ቤት ማጽዳት', 'ልብስ ማጠብ እና ማደርያ', 'ገበያ ወጥቶ ማምጣት', 'ህፃናት ተንከባካቢ', 'አረጋውያን ተንከባካቢ'];
     final skills = rawSkills.map((sk) {
-      final enIdx = enSkills.indexOf(sk);
-      final amIdx = amSkills.indexOf(sk);
+      final skT = sk.trim();
+      final enIdx = enSkills.indexWhere((e) => e.trim() == skT);
+      final amIdx = amSkills.indexWhere((e) => e.trim() == skT);
       if (s.isAmharic && enIdx >= 0) return amSkills[enIdx];
       if (!s.isAmharic && amIdx >= 0) return enSkills[amIdx];
       return sk;
     }).toList();
-    final languages = (p?['languages'] as List?)?.cast<String>() ?? widget.hk?.languages ?? [];
+
+    // Preferred areas translation
+    const enAreas = ['Bole', 'Kirkos', 'Yeka', 'Lideta', 'Arada', 'Addis Ketema', 'Gulele', 'Kolfe Keranio', 'Nifas Silk-Lafto', 'Akaky Kaliti'];
+    const amAreas = ['ቦሌ', 'ቅርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ'];
+    final rawAreas = (p?['preferredAreas'] as List?)?.cast<String>() ?? [];
+    final translatedAreas = rawAreas.map((area) {
+      final aT = area.trim();
+      final enIdx = enAreas.indexWhere((e) => e.trim() == aT);
+      final amIdx = amAreas.indexWhere((e) => e.trim() == aT);
+      if (s.isAmharic && enIdx >= 0) return amAreas[enIdx];
+      if (!s.isAmharic && amIdx >= 0) return enAreas[amIdx];
+      return area;
+    }).toList();
+    final location = translatedAreas.isNotEmpty ? translatedAreas.first : region;
+
+    // Experience translation
+    const enExp = ['No experience', '0–1 year', '1–2 years', '2–4 years', '4–6 years', '6+ years'];
+    const amExp = ['ልምድ የለም', '0–1 ዓመት', '1–2 ዓመት', '2–4 ዓመት', '4–6 ዓመት', '6+ ዓመት'];
+    final rawExp = p?['experienceYears'] as String? ?? widget.hk?.yearsExperience.toString() ?? '';
+    final expT = rawExp.trim();
+    final enExpIdx = enExp.indexWhere((e) => e.trim() == expT);
+    final amExpIdx = amExp.indexWhere((e) => e.trim() == expT);
+    final experience = s.isAmharic && enExpIdx >= 0
+        ? amExp[enExpIdx]
+        : !s.isAmharic && amExpIdx >= 0
+            ? enExp[amExpIdx]
+            : rawExp;
+
+    // Languages: stored as "Amharic / አምርኛ" — show only the right part
+    final rawLanguages = (p?['languages'] as List?)?.cast<String>() ?? widget.hk?.languages ?? [];
+    final languages = rawLanguages.map((lang) {
+      if (lang.contains('/')) {
+        final parts = lang.split('/');
+        return s.isAmharic ? (parts.length > 1 ? parts[1].trim() : lang) : parts[0].trim();
+      }
+      return lang;
+    }).toList();
+
     final bio = p?['bio'] as String? ?? widget.hk?.bio ?? '';
-    final salary = p?['rates']?['monthlyRate'] as String? ?? '';
-    final experience = p?['experienceYears'] as String? ?? widget.hk?.yearsExperience.toString() ?? '';
+    // Salary: strip any trailing /mo from stored value to avoid double /mo
+    final rawSalary = p?['rates']?['monthlyRate'] as String? ?? '';
+    final salary = rawSalary.replaceAll(RegExp(r'\s*/mo$'), '');
     final arrangement = p?['availability']?['arrangement'] as String? ?? '';
     final availability = p?['availability'] as Map<String, dynamic>? ?? {};
     final dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -271,11 +308,11 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
                         InfoRow(
                             label: s.workArrangementLabel,
                             value: displayArrangement),
-                      if (areas.isNotEmpty) ...[
+                      if (translatedAreas.isNotEmpty) ...[
                         const Divider(height: 0),
                         InfoRow(
                             label: s.preferredAreaLabel,
-                            value: areas.join(', ')),
+                            value: translatedAreas.join(', ')),
                       ],
                       if (salary.isNotEmpty) ...[
                         const Divider(height: 0),
