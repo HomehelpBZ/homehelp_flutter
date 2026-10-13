@@ -94,8 +94,8 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
     final location = translatedAreas.isNotEmpty ? translatedAreas.first : region;
 
     // Experience translation
-    const enExp = ['No experience', '0–1 year', '1–2 years', '2–4 years', '4–6 years', '6+ years'];
-    const amExp = ['ልምድ የለም', '0–1 ዓመት', '1–2 ዓመት', '2–4 ዓመት', '4–6 ዓመት', '6+ ዓመት'];
+    const enExp = ['No experience', 'Less than 1 year', '1 – 3 years', '4 – 6 years', '7+ years'];
+    const amExp = ['ልምድ የለም', 'ከ1 ዓመት በታች', '1 – 3 ዓመት', '4 – 6 ዓመት', '7+ ዓመት'];
     final rawExp = p?['experienceYears'] as String? ?? widget.hk?.yearsExperience.toString() ?? '';
     final expT = rawExp.trim();
     final enExpIdx = enExp.indexWhere((e) => e.trim() == expT);
