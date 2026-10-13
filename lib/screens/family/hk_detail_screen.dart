@@ -69,7 +69,16 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
     final region = p?['region'] as String? ?? '';
     final areas = (p?['preferredAreas'] as List?)?.cast<String>() ?? [];
     final location = areas.isNotEmpty ? areas.first : region;
-    final skills = (p?['skills'] as List?)?.cast<String>() ?? widget.hk?.skills ?? [];
+    final rawSkills = (p?['skills'] as List?)?.cast<String>() ?? widget.hk?.skills ?? [];
+    const enSkills = ['Traditional Ethiopian cooking', 'Modern / international cooking', 'Baking and pastries', 'General house cleaning', 'Laundry and ironing', 'Grocery shopping and errands', 'Childcare / babysitting', 'Caring for elderly'];
+    const amSkills = ['ባህላዊ የኢትዮጵያ ምግብ ማብሰል', 'ዘመናዊ / አለምዓቀፍ ምግብ ማብሰል', 'ዳቦ ማዘጋጀት', 'ቤት ማጽዳት', 'ልብስ ማጠብ እና ማደርያ', 'ገበያ ወጥቶ ማምጣት', 'ህፃናት ተንከባካቢ', 'አረጋውያን ተንከባካቢ'];
+    final skills = rawSkills.map((sk) {
+      final enIdx = enSkills.indexOf(sk);
+      final amIdx = amSkills.indexOf(sk);
+      if (s.isAmharic && enIdx >= 0) return amSkills[enIdx];
+      if (!s.isAmharic && amIdx >= 0) return enSkills[amIdx];
+      return sk;
+    }).toList();
     final languages = (p?['languages'] as List?)?.cast<String>() ?? widget.hk?.languages ?? [];
     final bio = p?['bio'] as String? ?? widget.hk?.bio ?? '';
     final salary = p?['rates']?['monthlyRate'] as String? ?? '';
