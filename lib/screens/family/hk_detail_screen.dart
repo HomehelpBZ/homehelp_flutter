@@ -81,7 +81,7 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
 
     // Preferred areas translation
     const enAreas = ['Bole', 'Kirkos', 'Yeka', 'Lideta', 'Arada', 'Addis Ketema', 'Gulele', 'Kolfe Keranio', 'Nifas Silk-Lafto', 'Akaky Kaliti'];
-    const amAreas = ['ቦሌ', 'ቆርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ'];
+    const amAreas = ['ቦሌ', 'ቄርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ'];
     final rawAreas = (p?['preferredAreas'] as List?)?.cast<String>() ?? [];
     final translatedAreas = rawAreas.map((area) {
       final aT = area.trim();

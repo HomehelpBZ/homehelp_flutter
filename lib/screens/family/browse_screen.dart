@@ -397,7 +397,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
                             // Translate area names
                             final enAreas = ['Bole', 'Kirkos', 'Lideta', 'Yeka', 'Arada', 'Addis Ketema', 'Gulele', 'Kolfe Keranio', 'Nifas Silk-Lafto', 'Akaky Kaliti', 'Lemi Kura'];
-                            final amAreas = ['ቦሌ', 'ቅርቆስ', 'ልደታ', 'የካ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ', 'ለሚ ኩራ'];
+                            final amAreas = ['ቦሌ', 'ቄርቆስ', 'ልደታ', 'የካ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ', 'ለሚ ኩራ'];
                             final firstArea = areas.isNotEmpty ? areas.first : region;
                             final enAreaIdx = enAreas.indexOf(firstArea);
                             final amAreaIdx = amAreas.indexOf(firstArea);
