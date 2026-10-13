@@ -94,17 +94,21 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
     final location = translatedAreas.isNotEmpty ? translatedAreas.first : region;
 
     // Experience translation
+    // Experience: may be stored in English OR Amharic depending on registration language
     const enExp = ['No experience', 'Less than 1 year', '1 – 3 years', '4 – 6 years', '7+ years'];
     const amExp = ['ልምድ የለም', 'ከ1 ዓመት በታች', '1 – 3 ዓመት', '4 – 6 ዓመት', '7+ ዓመት'];
+    // Also handle old Amharic variants with ዓመታት suffix
+    const amExpAlt = ['ልምድ የለም', 'ከ1 ዓመት በታች', '1 – 3 ዓመታት', '4 – 6 ዓመታት', '7+ ዓመታት'];
     final rawExp = p?['experienceYears'] as String? ?? widget.hk?.yearsExperience.toString() ?? '';
     final expT = rawExp.trim();
     final enExpIdx = enExp.indexWhere((e) => e.trim() == expT);
     final amExpIdx = amExp.indexWhere((e) => e.trim() == expT);
-    final experience = s.isAmharic && enExpIdx >= 0
-        ? amExp[enExpIdx]
-        : !s.isAmharic && amExpIdx >= 0
-            ? enExp[amExpIdx]
-            : rawExp;
+    final amExpAltIdx = amExpAlt.indexWhere((e) => e.trim() == expT);
+    // Resolve index: check both Amharic variant lists
+    final resolvedAmIdx = amExpIdx >= 0 ? amExpIdx : amExpAltIdx;
+    final experience = s.isAmharic
+        ? (enExpIdx >= 0 ? amExp[enExpIdx] : (resolvedAmIdx >= 0 ? amExp[resolvedAmIdx] : rawExp))
+        : (enExpIdx >= 0 ? rawExp : (resolvedAmIdx >= 0 ? enExp[resolvedAmIdx] : rawExp));
 
     // Languages: stored as "Amharic / አምርኛ" — show only the right part
     final rawLanguages = (p?['languages'] as List?)?.cast<String>() ?? widget.hk?.languages ?? [];
@@ -118,8 +122,12 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
 
     final bio = p?['bio'] as String? ?? widget.hk?.bio ?? '';
     // Salary: strip any trailing /mo from stored value to avoid double /mo
-    final rawSalary = p?['rates']?['monthlyRate'] as String? ?? '';
-    final salary = rawSalary.replaceAll(RegExp(r'\s*/mo$'), '');
+    final rawSalary = p?['rates']?['monthlyRate'] as String? ?? p?['salaryExpectation'] as String? ?? '';
+    // Strip any trailing /mo or Birr/mo suffix to avoid double-appending
+    final salary = rawSalary
+        .replaceAll(RegExp(r'\s*Birr/mo.*$'), '')
+        .replaceAll(RegExp(r'\s*/mo.*$'), '')
+        .trim();
     final arrangement = p?['availability']?['arrangement'] as String? ?? '';
     final availability = p?['availability'] as Map<String, dynamic>? ?? {};
     final dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
