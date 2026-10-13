@@ -81,7 +81,7 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
 
     // Preferred areas translation
     const enAreas = ['Bole', 'Kirkos', 'Yeka', 'Lideta', 'Arada', 'Addis Ketema', 'Gulele', 'Kolfe Keranio', 'Nifas Silk-Lafto', 'Akaky Kaliti'];
-    const amAreas = ['ቦሌ', 'ቅርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ'];
+    const amAreas = ['ቦሌ', 'ቆርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ'];
     final rawAreas = (p?['preferredAreas'] as List?)?.cast<String>() ?? [];
     final translatedAreas = rawAreas.map((area) {
       final aT = area.trim();
@@ -122,12 +122,7 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
 
     final bio = p?['bio'] as String? ?? widget.hk?.bio ?? '';
     // Salary: strip any trailing /mo from stored value to avoid double /mo
-    final rawSalary = p?['rates']?['monthlyRate'] as String? ?? p?['salaryExpectation'] as String? ?? '';
-    // Strip any trailing /mo or Birr/mo suffix to avoid double-appending
-    final salary = rawSalary
-        .replaceAll(RegExp(r'\s*Birr/mo.*$'), '')
-        .replaceAll(RegExp(r'\s*/mo.*$'), '')
-        .trim();
+    final salary = p?['rates']?['monthlyRate'] as String? ?? p?['salaryExpectation'] as String? ?? '';
     final arrangement = p?['availability']?['arrangement'] as String? ?? '';
     final availability = p?['availability'] as Map<String, dynamic>? ?? {};
     final dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -222,7 +217,7 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
                       _Stat('0', s.rating),
                       _Stat(experience, s.experience),
                       _Stat('0', s.reviewsLabel),
-                      _Stat('$salary ${s.birr}', s.perMonth),
+                      _Stat('$salary ${s.birr}/mo', s.perMonth),
                     ]),
                   ),
                 ],
@@ -326,7 +321,7 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
                         const Divider(height: 0),
                         InfoRow(
                             label: s.expectedSalaryLabel,
-                            value: '$salary ${s.birr}/mo'),
+                            value: '$salary ${s.birr}'),
                       ],
                     ]),
                   ),
