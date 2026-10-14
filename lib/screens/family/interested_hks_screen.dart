@@ -4,6 +4,8 @@ import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../family/hk_detail_screen.dart';
+import '../../models/housekeeper.dart';
+import 'family_chat_screen.dart';
 
 class InterestedHksScreen extends StatefulWidget {
   final Map<String, dynamic> job;
@@ -281,7 +283,17 @@ class _InterestedHksScreenState extends State<InterestedHksScreen> {
                                             fontSize: 12),
                                         minimumSize: Size.zero,
                                       ),
-                                      onPressed: () {},
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => FamilyChatScreen(
+                                            hk: Housekeeper.basic(
+                                                id: uid,
+                                                name: name,
+                                                location: location),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ]),

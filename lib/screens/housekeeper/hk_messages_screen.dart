@@ -27,7 +27,12 @@ class _HkMessagesScreenState extends State<HkMessagesScreen> {
   Future<void> _load() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) { setState(() => _loading = false); return; }
-    final chats = await _svc.getHkChats(uid);
+    List<Map<String, dynamic>> chats = [];
+    try {
+      chats = await _svc.getHkChats(uid);
+    } catch (e) {
+      debugPrint('getHkChats failed: $e');
+    }
     if (mounted) setState(() { _chats = chats; _loading = false; });
   }
 
@@ -76,7 +81,7 @@ class _HkMessagesScreenState extends State<HkMessagesScreen> {
                     final familyName = chat['familyName'] as String? ?? 'Family';
                     final familyUid = chat['familyUid'] as String? ?? '';
                     final lastMsg = chat['lastMessage'] as String? ?? '';
-                    final unread = (chat['hkUnread'] as num?)?.toInt() ?? 0;
+                    final unread = (chat[UserService.unreadHkField] as num?)?.toInt() ?? 0;
                     final time = _formatTime(chat['lastMessageAt']);
                     final initials = familyName.split(' ')
                         .where((w) => w.isNotEmpty).take(2)
@@ -147,8 +152,16 @@ class _HkChatScreenState extends State<HkChatScreen> {
   final _scrollController = ScrollController();
   final _svc = UserService();
   bool _sending = false;
+  String? _hkName;
 
   String get _hkUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _svc.getHkName(_hkUid).then((name) => _hkName = name, onError: (_) {});
+    _markRead();
+  }
 
   String _formatTime(Timestamp? ts) {
     if (ts == null) return '';
@@ -169,7 +182,16 @@ class _HkChatScreenState extends State<HkChatScreen> {
         hkUid: _hkUid,
         senderUid: _hkUid,
         text: text,
+        hkName: _hkName,
       );
+    } catch (e) {
+      debugPrint('sendMessage failed: $e');
+      // Put the text back so it isn't lost, and tell the user.
+      if (mounted) {
+        if (_controller.text.isEmpty) _controller.text = text;
+        showErrorToast(context, LanguageProvider.strings(context).errMessageNotSent);
+      }
+      return;
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -184,8 +206,15 @@ class _HkChatScreenState extends State<HkChatScreen> {
     });
   }
 
+  // Clear this side's unread count (no-op if the chat doesn't exist yet).
+  void _markRead() {
+    _svc.markChatRead(widget.familyUid, _hkUid, false)
+        .catchError((_) {});
+  }
+
   @override
   void dispose() {
+    _markRead(); // messages received while open
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();

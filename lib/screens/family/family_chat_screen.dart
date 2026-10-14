@@ -21,8 +21,17 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
   final _scrollController = ScrollController();
   final _svc = UserService();
   bool _sending = false;
+  String? _familyName;
 
   String get _familyUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _svc.getFamilyName(_familyUid).then((name) => _familyName = name,
+        onError: (_) {});
+    if (_familyUid.isNotEmpty) _markRead();
+  }
 
   String _formatTime(Timestamp? ts) {
     if (ts == null) return '';
@@ -35,6 +44,11 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
+    // Guests can browse but must sign in to message.
+    if (_familyUid.isEmpty) {
+      showErrorToast(context, LanguageProvider.strings(context).errSignInToMessage);
+      return;
+    }
     setState(() => _sending = true);
     _controller.clear();
     try {
@@ -43,7 +57,17 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
         hkUid: widget.hk.id,
         senderUid: _familyUid,
         text: text,
+        familyName: _familyName,
+        hkName: widget.hk.name,
       );
+    } catch (e) {
+      debugPrint('sendMessage failed (family=$_familyUid hk=${widget.hk.id}): $e');
+      // Put the text back so it isn't lost, and tell the user.
+      if (mounted) {
+        if (_controller.text.isEmpty) _controller.text = text;
+        showErrorToast(context, LanguageProvider.strings(context).errMessageNotSent);
+      }
+      return;
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -58,8 +82,15 @@ class _FamilyChatScreenState extends State<FamilyChatScreen> {
     });
   }
 
+  // Clear this side's unread count (no-op if the chat doesn't exist yet).
+  void _markRead() {
+    _svc.markChatRead(_familyUid, widget.hk.id, true)
+        .catchError((_) {});
+  }
+
   @override
   void dispose() {
+    if (_familyUid.isNotEmpty) _markRead(); // messages received while open
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();

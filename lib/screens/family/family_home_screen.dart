@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
+import '../../widgets/shared_widgets.dart';
 import 'browse_screen.dart';
 import 'my_jobs_screen.dart';
 import 'family_settings_screen.dart';
@@ -19,6 +21,16 @@ class FamilyHomeScreen extends StatefulWidget {
 class _FamilyHomeScreenState extends State<FamilyHomeScreen> {
   int _tab = 0;
   final AuthService _authService = AuthService();
+  Stream<int>? _unread; // unread message total for the Messages tab badge
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = _authService.currentUser?.uid;
+    if (!widget.isGuest && uid != null) {
+      _unread = UserService().unreadCount(uid, isFamily: true);
+    }
+  }
 
   void _signOut() {
     showDialog(
@@ -120,7 +132,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen> {
             label: s.myJobs,
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.message_outlined),
+            icon: UnreadBadgeIcon(icon: Icons.message_outlined, count: _unread),
             label: s.messages,
           ),
           BottomNavigationBarItem(

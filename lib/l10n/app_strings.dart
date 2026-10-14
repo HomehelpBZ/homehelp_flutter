@@ -96,6 +96,12 @@ class AppStrings {
   String get errSmsQuota => isAmharic
       ? 'የኤስኤምኤስ ገደብ ተሟልቷል። እባክዎ ቆይተው እንደገና ይሞክሩ።'
       : 'SMS quota exceeded. Please try again later.';
+  String get errSignInToMessage => isAmharic
+      ? 'መልዕክት ለመላክ እባክዎ ይግቡ።'
+      : 'Please sign in to send messages.';
+  String get errMessageNotSent => isAmharic
+      ? 'መልዕክቱ አልተላከም። እባክዎ እንደገና ይሞክሩ።'
+      : 'Message not sent. Please try again.';
   String get errSendCodeFailed => isAmharic
       ? 'የማረጋገጫ ኮድ መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።'
       : 'Failed to send verification code. Please try again.';

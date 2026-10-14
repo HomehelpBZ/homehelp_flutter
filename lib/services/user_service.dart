@@ -541,6 +541,8 @@ class UserService {
     required String hkUid,
     required String senderUid,
     required String text,
+    String? familyName,
+    String? hkName,
   }) async {
     final chatId = _chatId(familyUid, hkUid);
     final batch = _db.batch();
@@ -553,16 +555,54 @@ class UserService {
     });
     // Update chat thread metadata
     final chatRef = _db.collection('chats').doc(chatId);
-    batch.set(chatRef, {
+    batch.set(
+      chatRef,
+      chatThreadUpdate(
+        familyUid: familyUid,
+        hkUid: hkUid,
+        senderUid: senderUid,
+        text: text,
+        familyName: familyName,
+        hkName: hkName,
+      ),
+      SetOptions(merge: true),
+    );
+    await batch.commit();
+  }
+
+  // Chat thread fields, shared by the writer and both message lists.
+  static const unreadFamilyField = 'unreadFamily';
+  static const unreadHkField = 'unreadHk';
+
+  // Thread metadata written (merged) on every message.
+  static Map<String, dynamic> chatThreadUpdate({
+    required String familyUid,
+    required String hkUid,
+    required String senderUid,
+    required String text,
+    String? familyName,
+    String? hkName,
+  }) {
+    return {
       'familyUid': familyUid,
       'hkUid': hkUid,
       'lastMessage': text,
       'lastMessageAt': FieldValue.serverTimestamp(),
-      'unreadFamily': senderUid == hkUid ? FieldValue.increment(1) : 0,
-      'unreadHk': senderUid == familyUid ? FieldValue.increment(1) : 0,
-    }, SetOptions(merge: true));
-    await batch.commit();
+      // The recipient gets one more unread; the sender has read everything.
+      unreadFamilyField: senderUid == hkUid ? FieldValue.increment(1) : 0,
+      unreadHkField: senderUid == familyUid ? FieldValue.increment(1) : 0,
+      // Names shown in each side's message list
+      if (familyName != null && familyName.isNotEmpty) 'familyName': familyName,
+      if (hkName != null && hkName.isNotEmpty) 'hkName': hkName,
+    };
   }
+
+  // ── Own display name (for chat threads) ──────────────────────────────────
+  Future<String?> getFamilyName(String uid) async =>
+      (await getFamilyProfile(uid))?['fullName'] as String?;
+
+  Future<String?> getHkName(String uid) async =>
+      (await getHkProfile(uid))?['fullName'] as String?;
 
   Stream<QuerySnapshot> getMessages(String familyUid, String hkUid) {
     final chatId = _chatId(familyUid, hkUid);
@@ -574,26 +614,49 @@ class UserService {
         .snapshots();
   }
 
+  // NOTE: sorted client-side to avoid a Firestore composite index
   Future<List<Map<String, dynamic>>> getFamilyChats(String familyUid) async {
     final snap = await _db.collection('chats')
         .where('familyUid', isEqualTo: familyUid)
-        .orderBy('lastMessageAt', descending: true)
         .get();
-    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+    return sortNewestFirst(snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
   }
 
   Future<List<Map<String, dynamic>>> getHkChats(String hkUid) async {
     final snap = await _db.collection('chats')
         .where('hkUid', isEqualTo: hkUid)
-        .orderBy('lastMessageAt', descending: true)
         .get();
-    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+    return sortNewestFirst(snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  // ── Unread badge ──────────────────────────────────────────────────────────
+  // Live total of unread messages across all of this user's chats.
+  Stream<int> unreadCount(String uid, {required bool isFamily}) {
+    return _db
+        .collection('chats')
+        .where(isFamily ? 'familyUid' : 'hkUid', isEqualTo: uid)
+        .snapshots()
+        .map((snap) => sumUnread(snap.docs.map((d) => d.data()),
+            isFamily ? unreadFamilyField : unreadHkField));
+  }
+
+  static int sumUnread(Iterable<Map<String, dynamic>> chats, String field) =>
+      chats.fold(0, (sum, c) {
+        final n = (c[field] as num?)?.toInt() ?? 0;
+        return sum + (n > 0 ? n : 0);
+      });
+
+  static List<Map<String, dynamic>> sortNewestFirst(
+      List<Map<String, dynamic>> chats) {
+    int millis(Map<String, dynamic> c) =>
+        (c['lastMessageAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+    return chats..sort((a, b) => millis(b).compareTo(millis(a)));
   }
 
   Future<void> markChatRead(String familyUid, String hkUid, bool isFamily) async {
     final chatId = _chatId(familyUid, hkUid);
     await _db.collection('chats').doc(chatId).update({
-      isFamily ? 'unreadFamily' : 'unreadHk': 0,
+      isFamily ? unreadFamilyField : unreadHkField: 0,
     });
   }
 

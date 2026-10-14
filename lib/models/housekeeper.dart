@@ -36,6 +36,37 @@ class Housekeeper {
     this.isVerified = true,
     this.avatarColor = '#1E3A8A',
   });
+
+  // Minimal housekeeper for chat and reviews, where only id and name matter.
+  factory Housekeeper.basic({
+    required String id,
+    required String name,
+    String location = '',
+  }) {
+    final initials = name
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w[0].toUpperCase())
+        .join();
+    return Housekeeper(
+      id: id,
+      name: name,
+      initials: initials.isEmpty ? '?' : initials,
+      location: location,
+      yearsExperience: 0,
+      salaryMin: 0,
+      salaryMax: 0,
+      rating: 0,
+      reviewCount: 0,
+      skills: const [],
+      languages: const [],
+      arrangement: '',
+      availableDays: const [],
+      education: '',
+      bio: '',
+    );
+  }
 }
 
 // Sample data

@@ -28,7 +28,12 @@ class _FamilyMessagesScreenState extends State<FamilyMessagesScreen> {
   Future<void> _load() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) { setState(() => _loading = false); return; }
-    final chats = await _svc.getFamilyChats(uid);
+    List<Map<String, dynamic>> chats = [];
+    try {
+      chats = await _svc.getFamilyChats(uid);
+    } catch (e) {
+      debugPrint('getFamilyChats failed: $e');
+    }
     if (mounted) setState(() { _chats = chats; _loading = false; });
   }
 
@@ -100,7 +105,7 @@ class _FamilyMessagesScreenState extends State<FamilyMessagesScreen> {
                           final hkName = chat['hkName'] as String? ?? '';
                           final hkId = chat['hkUid'] as String? ?? '';
                           final lastMsg = chat['lastMessage'] as String? ?? '';
-                          final unread = (chat['familyUnread'] as num?)?.toInt() ?? 0;
+                          final unread = (chat[UserService.unreadFamilyField] as num?)?.toInt() ?? 0;
                           final time = _formatTime(chat['lastMessageAt']);
                           final initials = hkName.split(' ')
                               .where((w) => w.isNotEmpty).take(2)

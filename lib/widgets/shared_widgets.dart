@@ -373,6 +373,53 @@ void showSuccessToast(BuildContext context, String message) {
   );
 }
 
+// ── Icon with red unread-count badge ──────────────────────────────────────────
+class UnreadBadgeIcon extends StatelessWidget {
+  final IconData icon;
+  final Stream<int>? count; // null (e.g. guest) shows the plain icon
+  const UnreadBadgeIcon({super.key, required this.icon, this.count});
+
+  static String label(int n) => n > 99 ? '99+' : '$n';
+
+  @override
+  Widget build(BuildContext context) {
+    if (count == null) return Icon(icon);
+    return StreamBuilder<int>(
+      stream: count,
+      builder: (context, snap) {
+        final n = snap.data ?? 0;
+        return Badge(
+          isLabelVisible: n > 0,
+          backgroundColor: AppTheme.red,
+          textColor: Colors.white,
+          label: Text(label(n)),
+          child: Icon(icon),
+        );
+      },
+    );
+  }
+}
+
+// ── Toast / error banner ──────────────────────────────────────────────────────
+void showErrorToast(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(Icons.error_outline, color: AppTheme.red, size: 16),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message, style: const TextStyle(color: AppTheme.red))),
+        ],
+      ),
+      backgroundColor: AppTheme.redLight,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      margin: const EdgeInsets.all(16),
+      duration: const Duration(seconds: 4),
+    ),
+  );
+}
+
 /// Standard navy AppBar with language toggle always in actions
 AppBar navyAppBar(String title, {List<Widget>? extraActions}) {
   return AppBar(

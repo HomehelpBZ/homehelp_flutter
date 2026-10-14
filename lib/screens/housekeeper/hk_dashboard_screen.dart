@@ -26,11 +26,14 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
   final Set<String> _expressedInterest = {};
   Map<String, dynamic>? _hkProfile;
   bool _profileLoading = true;
+  Stream<int>? _unread; // unread message total for the Messages tab badge
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) _unread = _userService.unreadCount(uid, isFamily: false);
   }
 
   void _loadProfile() async {
@@ -291,7 +294,8 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
           BottomNavigationBarItem(
               icon: const Icon(Icons.work_outline), label: s.jobsTab),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.message_outlined), label: s.messages),
+              icon: UnreadBadgeIcon(icon: Icons.message_outlined, count: _unread),
+              label: s.messages),
           BottomNavigationBarItem(
               icon: const Icon(Icons.person_outlined), label: s.profileTab),
         ],

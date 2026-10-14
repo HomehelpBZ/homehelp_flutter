@@ -342,12 +342,18 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.message_outlined, size: 14),
                         label: Text(s.sendMessage),
-                        onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => FamilyChatScreen(
-                                    hk: widget.hk ??
-                                        sampleHousekeepers.first))),
+                        // Chat with the housekeeper shown on this screen.
+                        onPressed: widget.hk == null && widget.uid == null
+                            ? null
+                            : () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => FamilyChatScreen(
+                                        hk: widget.hk ??
+                                            Housekeeper.basic(
+                                                id: widget.uid!,
+                                                name: name,
+                                                location: location)))),
                       ),
                     ),
                   ]),
