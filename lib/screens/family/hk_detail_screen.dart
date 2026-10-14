@@ -5,6 +5,8 @@ import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../models/housekeeper.dart';
 import 'family_chat_screen.dart';
+import 'family_messages_screen.dart';
+import '../../services/auth_service.dart';
 
 class HkDetailScreen extends StatefulWidget {
   final String? uid;
@@ -343,8 +345,11 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
                         icon: const Icon(Icons.message_outlined, size: 14),
                         label: Text(s.sendMessage),
                         // Chat with the housekeeper shown on this screen.
+                        // Guests are asked to sign in first.
                         onPressed: widget.hk == null && widget.uid == null
                             ? null
+                            : !AuthService.isSignedIn
+                            ? () => showGuestMessagesSheet(context)
                             : () => Navigator.push(
                                 context,
                                 MaterialPageRoute(

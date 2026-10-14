@@ -80,7 +80,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen> {
             children: [
               const BrowseScreen(showBackButton: false),
               MyJobsScreen(isGuest: widget.isGuest),
-              const FamilyMessagesScreen(),
+              FamilyMessagesScreen(isGuest: widget.isGuest),
               const FamilySettingsScreen(),
             ],
           ),

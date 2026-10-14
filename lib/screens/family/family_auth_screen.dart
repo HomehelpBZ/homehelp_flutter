@@ -135,7 +135,7 @@ class FamilyAuthScreen extends StatelessWidget {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const _FamilySignUpScreen()),
+                            builder: (_) => const FamilySignUpScreen()),
                       ),
                       child: Container(
                         width: double.infinity,
@@ -237,14 +237,14 @@ class FamilyAuthScreen extends StatelessWidget {
 }
 
 // ── Sign Up Screen ────────────────────────────────────────────────────────────
-class _FamilySignUpScreen extends StatefulWidget {
-  const _FamilySignUpScreen();
+class FamilySignUpScreen extends StatefulWidget {
+  const FamilySignUpScreen({super.key});
 
   @override
-  State<_FamilySignUpScreen> createState() => _FamilySignUpScreenState();
+  State<FamilySignUpScreen> createState() => _FamilySignUpScreenState();
 }
 
-class _FamilySignUpScreenState extends State<_FamilySignUpScreen> {
+class _FamilySignUpScreenState extends State<FamilySignUpScreen> {
   final AuthService _authService = AuthService();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();

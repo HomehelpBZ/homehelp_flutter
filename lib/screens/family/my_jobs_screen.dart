@@ -176,10 +176,9 @@ class _GuestJobsPlaceholder extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.pushAndRemoveUntil(
+                onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const FamilyAuthScreen()),
-                  (route) => false,
+                  MaterialPageRoute(builder: (_) => const FamilySignUpScreen()),
                 ),
                 child: Text(s.createAccount),
               ),
@@ -188,10 +187,9 @@ class _GuestJobsPlaceholder extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () => Navigator.pushAndRemoveUntil(
+                onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const FamilyAuthScreen()),
-                  (route) => false,
+                  MaterialPageRoute(builder: (_) => const FamilySignInScreen()),
                 ),
                 child: Text(s.signInBtn),
               ),

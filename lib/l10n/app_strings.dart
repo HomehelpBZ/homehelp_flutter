@@ -518,6 +518,15 @@ class AppStrings {
   String get guestPostJobSubtitle => isAmharic
       ? 'ሥራ መለጠፍ ነጻ ነው። መለያ መፍጠር 30 ሰከንድ ብቻ ይወስዳል።'
       : 'Posting a job is free. Creating an account takes just 30 seconds.';
+  String get guestMessagesTitle => isAmharic
+      ? 'መልዕክቶችዎን ለማየት ይግቡ'
+      : 'Sign in to see your messages';
+  String get guestMessagesSubtitle => isAmharic
+      ? 'ከቤት ሠራተኞች ጋር ለመወያየት መለያ ያስፈልጋል። መለያ መፍጠር 30 ሰከንድ ብቻ ይወስዳል።'
+      : 'You need an account to chat with housekeepers. Creating one takes just 30 seconds.';
+  String get familyMessagesSubtitle => isAmharic
+      ? 'ከቤት ሠራተኞች ጋር ያደረጓቸው ውይይቶች'
+      : 'Your conversations with housekeepers';
 // ── Guarantor ─────────────────────────────────────────────────────────────
   String get stepGuarantor => isAmharic ? 'ተያዥ (Guarantor)' : 'Guarantor (ተያዥ)';
   String get guarantorNote => isAmharic

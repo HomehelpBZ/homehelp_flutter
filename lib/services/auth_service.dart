@@ -9,6 +9,20 @@ class AuthService {
 
   // ── Current user ──────────────────────────────────────────────────────────
   User? get currentUser => _auth.currentUser;
+
+  // Tests only: pretend someone is (or isn't) signed in.
+  static bool? debugSignedInOverride;
+
+  // Whether someone is signed in (false for guests, or if Firebase isn't set
+  // up, e.g. in widget tests).
+  static bool get isSignedIn {
+    if (debugSignedInOverride != null) return debugSignedInOverride!;
+    try {
+      return FirebaseAuth.instance.currentUser != null;
+    } catch (_) {
+      return false;
+    }
+  }
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // ── Helper: normalize phone to local 0XXXXXXXXX form ──────────────────────

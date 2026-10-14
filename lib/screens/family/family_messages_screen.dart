@@ -6,23 +6,25 @@ import '../../l10n/language_provider.dart';
 import '../../models/housekeeper.dart';
 import '../../services/user_service.dart';
 import 'family_chat_screen.dart';
+import 'family_auth_screen.dart';
 
 class FamilyMessagesScreen extends StatefulWidget {
-  const FamilyMessagesScreen({super.key});
+  final bool isGuest;
+  const FamilyMessagesScreen({super.key, this.isGuest = false});
 
   @override
   State<FamilyMessagesScreen> createState() => _FamilyMessagesScreenState();
 }
 
 class _FamilyMessagesScreenState extends State<FamilyMessagesScreen> {
-  final _svc = UserService();
+  late final _svc = UserService(); // lazy: guests never touch Firebase
   List<Map<String, dynamic>> _chats = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (!widget.isGuest) _load();
   }
 
   Future<void> _load() async {
@@ -75,14 +77,16 @@ class _FamilyMessagesScreenState extends State<FamilyMessagesScreen> {
                       style: const TextStyle(
                           color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 2),
-                  Text(s.familiesInterested,
+                  Text(s.familyMessagesSubtitle,
                       style: const TextStyle(color: Color(0xAAFFFFFF), fontSize: 12)),
                 ],
               ),
             ),
           ),
           Expanded(
-            child: _loading
+            child: widget.isGuest
+                ? const GuestMessagesPrompt()
+                : _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _chats.isEmpty
                     ? Center(
@@ -172,4 +176,74 @@ class _FamilyMessagesScreenState extends State<FamilyMessagesScreen> {
       ),
     );
   }
+}
+// ── Guest prompt: messaging needs an account ─────────────────────────────────
+// Fills the Messages tab for guests, or shows as a sheet (see below).
+class GuestMessagesPrompt extends StatelessWidget {
+  final bool inSheet; // close the sheet before opening sign-in / sign-up
+  const GuestMessagesPrompt({super.key, this.inSheet = false});
+
+  void _open(BuildContext context, Widget screen) {
+    final navigator = Navigator.of(context);
+    if (inSheet) navigator.pop();
+    navigator.push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = LanguageProvider.strings(context);
+    final content = Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: inSheet ? MainAxisSize.min : MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 68, height: 68,
+            decoration: const BoxDecoration(color: AppTheme.primaryLight, shape: BoxShape.circle),
+            child: const Icon(Icons.lock_outline, size: 34, color: AppTheme.primary),
+          ),
+          const SizedBox(height: 16),
+          Text(s.guestMessagesTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.grey800),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(s.guestMessagesSubtitle,
+              style: const TextStyle(fontSize: 13, color: AppTheme.grey600, height: 1.5),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _open(context, const FamilySignInScreen()),
+              child: Text(s.signInBtn),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _open(context, const FamilySignUpScreen()),
+              child: Text(s.createAccount),
+            ),
+          ),
+        ],
+      ),
+    );
+    return inSheet
+        ? SafeArea(child: SingleChildScrollView(child: content))
+        : Center(child: content);
+  }
+}
+
+// Shown when a guest tries to message, e.g. from a housekeeper's profile.
+Future<void> showGuestMessagesSheet(BuildContext context) {
+  return showModalBottomSheet(
+    context: context,
+    isScrollControlled: true, // size to content, not half the screen
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (_) => const GuestMessagesPrompt(inSheet: true),
+  );
 }

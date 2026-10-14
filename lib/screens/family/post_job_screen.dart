@@ -456,14 +456,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context); // close bottom sheet
-                  Navigator.pop(context); // close post job screen
-                  // Navigate to family auth screen (sign up tab)
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FamilyAuthScreen()),
-                    (route) => false,
-                  );
+                  final navigator = Navigator.of(context);
+                  navigator.pop(); // close bottom sheet
+                  navigator.pop(); // close post job screen
+                  // Go straight to family sign-up
+                  navigator.push(MaterialPageRoute(
+                      builder: (_) => const FamilySignUpScreen()));
                 },
                 child: Text(s.createAccount),
               ),
@@ -473,14 +471,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () {
-                  Navigator.pop(context); // close bottom sheet
-                  Navigator.pop(context); // close post job screen
-                  // Navigate to family auth screen (sign in tab)
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FamilyAuthScreen()),
-                    (route) => false,
-                  );
+                  final navigator = Navigator.of(context);
+                  navigator.pop(); // close bottom sheet
+                  navigator.pop(); // close post job screen
+                  // Go straight to family sign-in
+                  navigator.push(MaterialPageRoute(
+                      builder: (_) => const FamilySignInScreen()));
                 },
                 child: Text(s.signInBtn),
               ),

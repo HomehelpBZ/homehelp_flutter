@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homehelp/l10n/language_provider.dart';
 import 'package:homehelp/models/housekeeper.dart';
+import 'package:homehelp/screens/family/family_auth_screen.dart';
 import 'package:homehelp/screens/family/family_chat_screen.dart';
+import 'package:homehelp/screens/family/family_messages_screen.dart';
 import 'package:homehelp/screens/family/hk_detail_screen.dart';
+import 'package:homehelp/services/auth_service.dart';
 import 'package:homehelp/services/user_service.dart';
 import 'package:homehelp/theme/app_theme.dart';
 import 'package:homehelp/widgets/shared_widgets.dart';
@@ -21,8 +24,62 @@ class _PushRecorder extends NavigatorObserver {
 void main() {
   // ══════════════════════════════════════════════════════════════════════════
   group('HkDetailScreen "Send message"', () {
+    tearDown(() => AuthService.debugSignedInOverride = null);
+
+    Future<_PushRecorder> pumpDetail(WidgetTester tester) async {
+      final recorder = _PushRecorder();
+      await tester.pumpWidget(LanguageProvider(
+        notifier: LanguageNotifier(),
+        child: MaterialApp(
+          navigatorObservers: [recorder],
+          home: const HkDetailScreen(uid: 'real-hk-uid'),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      return recorder;
+    }
+
+    Future<void> tapSendMessage(WidgetTester tester) async {
+      final button = find.text('Send message');
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('guest gets the sign-in sheet instead of a chat', (tester) async {
+      AuthService.debugSignedInOverride = false; // guest
+      final recorder = await pumpDetail(tester);
+      final pushesBefore = recorder.routes.length;
+
+      await tapSendMessage(tester);
+
+      expect(find.text('Sign in to see your messages'), findsOneWidget);
+      // Only the sheet opened — no new page (chat) was pushed.
+      expect(recorder.routes.skip(pushesBefore).whereType<MaterialPageRoute>(),
+          isEmpty);
+    });
+
+    testWidgets('"Sign in" in the sheet closes it and opens sign-in',
+        (tester) async {
+      AuthService.debugSignedInOverride = false;
+      final recorder = await pumpDetail(tester);
+      await tapSendMessage(tester);
+
+      await tester.tap(find.text('Sign in →'));
+      await tester.pump();
+      tester.takeException(); // the sign-in screen needs Firebase
+      await tester.pump(const Duration(seconds: 1)); // sheet slides away
+      tester.takeException();
+
+      expect(find.text('Sign in to see your messages'), findsNothing);
+      final route = recorder.routes.last as MaterialPageRoute;
+      expect(route.builder(tester.element(find.byType(HkDetailScreen, skipOffstage: false))),
+          isA<FamilySignInScreen>());
+    });
+
     testWidgets('opens a chat with the housekeeper being viewed, not sample data',
         (tester) async {
+      AuthService.debugSignedInOverride = true; // signed-in family
       final recorder = _PushRecorder();
       await tester.pumpWidget(LanguageProvider(
         notifier: LanguageNotifier(),
@@ -47,6 +104,81 @@ void main() {
           as FamilyChatScreen;
       expect(chat.hk.id, 'real-hk-uid');
       expect(chat.hk.id, isNot(sampleHousekeepers.first.id));
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  group('FamilyMessagesScreen for guests', () {
+    Future<void> pumpGuest(WidgetTester tester, {String lang = 'en'}) async {
+      final notifier = LanguageNotifier()..setLanguage(lang);
+      await tester.pumpWidget(LanguageProvider(
+        notifier: notifier,
+        child: const MaterialApp(home: FamilyMessagesScreen(isGuest: true)),
+      ));
+      await tester.pump();
+    }
+
+    testWidgets('shows a sign-in prompt instead of the messages list',
+        (tester) async {
+      await pumpGuest(tester);
+      expect(find.text('Sign in to see your messages'), findsOneWidget);
+      expect(find.text('Sign in →'), findsOneWidget);
+      expect(find.text('Create account →'), findsOneWidget);
+      expect(find.text('No messages yet'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('header is the family subtitle, not the housekeeper one',
+        (tester) async {
+      await pumpGuest(tester);
+      expect(find.text('Your conversations with housekeepers'), findsOneWidget);
+      expect(find.text('Families interested in hiring you'), findsNothing);
+    });
+
+    testWidgets('"Sign in" opens the family sign-in screen', (tester) async {
+      final recorder = _PushRecorder();
+      await tester.pumpWidget(LanguageProvider(
+        notifier: LanguageNotifier(),
+        child: MaterialApp(
+          navigatorObservers: [recorder],
+          home: const FamilyMessagesScreen(isGuest: true),
+        ),
+      ));
+      await tester.pump();
+      await tester.tap(find.text('Sign in →'));
+      await tester.pump();
+      // The sign-in screen itself needs Firebase; only the route matters here.
+      tester.takeException();
+
+      final route = recorder.routes.last as MaterialPageRoute;
+      expect(route.builder(tester.element(find.byType(FamilyMessagesScreen))),
+          isA<FamilySignInScreen>());
+    });
+
+    testWidgets('"Create account" opens family sign-up directly', (tester) async {
+      final recorder = _PushRecorder();
+      await tester.pumpWidget(LanguageProvider(
+        notifier: LanguageNotifier(),
+        child: MaterialApp(
+          navigatorObservers: [recorder],
+          home: const FamilyMessagesScreen(isGuest: true),
+        ),
+      ));
+      await tester.pump();
+      await tester.tap(find.text('Create account →'));
+      await tester.pump();
+      tester.takeException(); // the sign-up screen needs Firebase
+
+      final route = recorder.routes.last as MaterialPageRoute;
+      final screen = route.builder(tester.element(
+          find.byType(FamilyMessagesScreen, skipOffstage: false)));
+      expect(screen, isA<FamilySignUpScreen>());
+      expect(screen, isNot(isA<FamilyAuthScreen>())); // not the landing page
+    });
+
+    testWidgets('prompt is translated in Amharic', (tester) async {
+      await pumpGuest(tester, lang: 'am');
+      expect(find.text('መልዕክቶችዎን ለማየት ይግቡ'), findsOneWidget);
     });
   });
 
