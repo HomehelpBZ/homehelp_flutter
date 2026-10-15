@@ -22,7 +22,203 @@ service cloud.firestore {
     match /housekeeperProfiles/{userId} {
       allow read: if resource.data.verificationStatus == 'approved'
                   || (request.auth != null && request.auth.uid == userId);
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // The housekeeper owns the profile but can't set their own rating.
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.get('ratingAverage', 0) == 0 &&
+        request.resource.data.get('ratingCount', 0) == 0;
+      allow update: if request.auth != null && request.auth.uid == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['ratingAverage', 'ratingCount']);
+      allow delete: if request.auth != null && request.auth.uid == userId;
+      // A family's review changes the rating, in the same write as the review:
+      // adding one rating, or changing it when they edit their review.
+      // Admins take a rating out when they remove an abusive review.
+      allow update: if request.auth != null && request.auth.uid != userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['ratingAverage', 'ratingCount']) &&
+        (ratingAdded(request.auth.uid, userId) ||
+         ratingEdited(request.auth.uid, userId) ||
+         isAdmin());
+    }
+
+    // Admins are listed in /admins/{uid}. Only added in the Firebase console;
+    // the app can't write there.
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Review and hire ids are "<familyUid>_<hkUid>": one per family per housekeeper.
+    function reviewPath(familyUid, hkUid) {
+      return /databases/$(database)/documents/reviews/$(familyUid + '_' + hkUid);
+    }
+
+    function profilePath(hkUid) {
+      return /databases/$(database)/documents/housekeeperProfiles/$(hkUid);
+    }
+
+    function oldCount() { return resource.data.get('ratingCount', 0); }
+    function oldAverage() { return float(resource.data.get('ratingAverage', 0)); }
+    function newCount() { return request.resource.data.ratingCount; }
+    function newAverage() { return request.resource.data.ratingAverage; }
+
+    function ratingAdded(familyUid, hkUid) {
+      return !exists(reviewPath(familyUid, hkUid)) &&
+        existsAfter(reviewPath(familyUid, hkUid)) &&
+        newCount() == oldCount() + 1 &&
+        math.abs(newAverage() - (oldAverage() * oldCount() +
+          getAfter(reviewPath(familyUid, hkUid)).data.starRating) /
+          float(newCount())) < 0.001;
+    }
+
+    // The family changed the stars on their review: same count, new average.
+    function ratingEdited(familyUid, hkUid) {
+      return exists(reviewPath(familyUid, hkUid)) &&
+        newCount() == oldCount() && newCount() > 0 &&
+        math.abs(newAverage() - (oldAverage() * oldCount() -
+          get(reviewPath(familyUid, hkUid)).data.starRating +
+          getAfter(reviewPath(familyUid, hkUid)).data.starRating) /
+          float(newCount())) < 0.001;
+    }
+
+    // Reviews and replies can be edited for 48 hours (UserService.editWindow).
+    function inEditWindow(since) {
+      return request.time < since + duration.value(48, 'h');
+    }
+
+    function validReviewText(d) {
+      return d.starRating is int && d.starRating >= 1 && d.starRating <= 5 &&
+        d.reviewText is string && d.reviewText.size() <= 300;
+    }
+
+    function validReplyText(text) {
+      return text is string && text.size() > 0 && text.size() <= 300;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      // Families review a housekeeper they hired through the app, starting
+      // 3 days after the start date. The rating on the housekeeper's profile
+      // must be updated in the same write.
+      allow create: if request.auth != null &&
+        request.resource.data.familyUid == request.auth.uid &&
+        reviewId == request.auth.uid + '_' + request.resource.data.hkUid &&
+        request.resource.data.keys().hasOnly(['hkUid', 'familyUid',
+          'familyName', 'starRating', 'wouldHireAgain', 'tags', 'reviewText',
+          'createdAt']) &&
+        validReviewText(request.resource.data) &&
+        canReview(reviewId) &&
+        getAfter(profilePath(request.resource.data.hkUid))
+          .data.get('ratingCount', 0) ==
+        get(profilePath(request.resource.data.hkUid))
+          .data.get('ratingCount', 0) + 1;
+      // Nobody deletes reviews. Admins hide abusive ones instead (below).
+      allow delete: if false;
+      allow update: if request.auth != null &&
+        resource.data.get('removed', false) == false && (
+        // The family can edit their review for 48 hours. If the stars change,
+        // the rating on the profile must change in the same write.
+        (request.auth.uid == resource.data.familyUid &&
+          inEditWindow(resource.data.createdAt) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['starRating', 'wouldHireAgain', 'tags', 'reviewText',
+                      'editedAt']) &&
+          validReviewText(request.resource.data) &&
+          request.resource.data.editedAt == request.time &&
+          (request.resource.data.starRating == resource.data.starRating ||
+           getAfter(profilePath(resource.data.hkUid)).data.ratingAverage !=
+             get(profilePath(resource.data.hkUid)).data.ratingAverage)) ||
+        // The housekeeper replies once, up to 300 characters.
+        (request.auth.uid == resource.data.hkUid &&
+          !('response' in resource.data) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['response']) &&
+          request.resource.data.response.keys().hasOnly(['text', 'createdAt']) &&
+          validReplyText(request.resource.data.response.text) &&
+          request.resource.data.response.createdAt == request.time) ||
+        // ...and can edit that reply for 48 hours.
+        (request.auth.uid == resource.data.hkUid &&
+          'response' in resource.data &&
+          inEditWindow(resource.data.response.createdAt) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['response']) &&
+          request.resource.data.response.keys()
+            .hasOnly(['text', 'createdAt', 'editedAt']) &&
+          request.resource.data.response.createdAt ==
+            resource.data.response.createdAt &&
+          validReplyText(request.resource.data.response.text) &&
+          request.resource.data.response.editedAt == request.time) ||
+        // An admin hides an abusive review. It stays stored (so the family
+        // can't post it again) and is taken out of the rating.
+        (isAdmin() &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['removed', 'removedAt', 'removedBy', 'removedReason']) &&
+          request.resource.data.removed == true &&
+          request.resource.data.removedBy == request.auth.uid &&
+          request.resource.data.removedAt == request.time &&
+          getAfter(profilePath(resource.data.hkUid)).data.get('ratingCount', 0) ==
+            get(profilePath(resource.data.hkUid)).data.get('ratingCount', 0) - 1));
+    }
+
+    // The hire with the same id as the review must be accepted, and the start
+    // date at least 3 days ago (Hire.reviewWait in the app).
+    function canReview(hireId) {
+      let hire = get(/databases/$(database)/documents/hires/$(hireId)).data;
+      return hire.status == 'accepted' &&
+        request.time >= hire.startDate + duration.value(3, 'd');
+    }
+
+    // A family hiring a housekeeper. Id is "<familyUid>_<hkUid>".
+    match /hires/{hireId} {
+      // Uids have no '_', so the id says who's in the hire (works for docs
+      // that don't exist yet, which listeners need).
+      allow read: if request.auth != null && request.auth.uid in hireId.split('_');
+      // The family sends a request; a new one can replace a declined or
+      // cancelled hire.
+      allow create: if isHireRequest(hireId);
+      allow update: if
+        (resource.data.status in ['declined', 'cancelled'] &&
+          isHireRequest(hireId)) ||
+        // The housekeeper accepts or declines a pending request.
+        (request.auth != null && request.auth.uid == resource.data.hkUid &&
+          resource.data.status == 'pending' &&
+          request.resource.data.status in ['accepted', 'declined'] &&
+          hireChangedOnly(['status', 'updatedAt'])) ||
+        // The family withdraws a pending request, or either side cancels an
+        // accepted hire before the start date.
+        (request.auth != null &&
+          request.auth.uid in [resource.data.familyUid, resource.data.hkUid] &&
+          (resource.data.status == 'pending' &&
+             request.auth.uid == resource.data.familyUid ||
+           resource.data.status == 'accepted' &&
+             request.time < resource.data.startDate) &&
+          request.resource.data.status == 'cancelled' &&
+          request.resource.data.cancelledBy == request.auth.uid &&
+          hireChangedOnly(['status', 'updatedAt', 'cancelledBy']));
+    }
+
+    function isHireRequest(hireId) {
+      let d = request.resource.data;
+      return request.auth != null &&
+        d.familyUid == request.auth.uid &&
+        hireId == request.auth.uid + '_' + d.hkUid &&
+        d.keys().hasOnly(['familyUid', 'hkUid', 'familyName', 'hkName',
+          'startDate', 'monthlySalary', 'status', 'createdAt', 'updatedAt']) &&
+        d.status == 'pending' &&
+        d.startDate is timestamp &&
+        d.startDate > request.time - duration.value(1, 'd') &&
+        d.monthlySalary is int &&
+        d.monthlySalary > 0 && d.monthlySalary <= 1000000 &&
+        exists(/databases/$(database)/documents/familyProfiles/$(request.auth.uid)) &&
+        exists(profilePath(d.hkUid));
+    }
+
+    function hireChangedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
     }
 
     match /verificationQueue/{userId} {

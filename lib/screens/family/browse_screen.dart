@@ -414,6 +414,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                               skills: translatedSkills,
                               displayArea: displayArea,
                               displayExperience: displayExperience,
+                              rating: (hk[UserService.ratingAverageField] as num?)?.toDouble() ?? 0,
+                              reviewCount: (hk[UserService.ratingCountField] as num?)?.toInt() ?? 0,
                               areas: areas,
                               arrangement: arrangement,
                               salary: salary,
@@ -454,6 +456,8 @@ class _HkFirestoreCard extends StatelessWidget {
   final VoidCallback onTap;
   final String displayArea;
   final String displayExperience;
+  final double rating;
+  final int reviewCount;
 
   const _HkFirestoreCard({
     required this.uid,
@@ -471,6 +475,8 @@ class _HkFirestoreCard extends StatelessWidget {
     required this.onTap,
     required this.displayArea,
     required this.displayExperience,
+    required this.rating,
+    required this.reviewCount,
   });
 
   @override
@@ -529,6 +535,21 @@ class _HkFirestoreCard extends StatelessWidget {
                       const SizedBox(height: 5),
                       Row(children: [
                         const VerifiedBadge(),
+                        const SizedBox(width: 8),
+                        // Rating from families' reviews.
+                        if (reviewCount > 0) ...[
+                          const Icon(Icons.star,
+                              size: 13, color: Color(0xFFEF9F27)),
+                          const SizedBox(width: 2),
+                          Text(
+                              '${rating.toStringAsFixed(1)} · '
+                              '${LanguageProvider.strings(context).reviewCountLabel(reviewCount)}',
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppTheme.grey600)),
+                        ] else
+                          Text(LanguageProvider.strings(context).noReviewsYet,
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppTheme.grey400)),
                       ]),
                     ]),
               ),

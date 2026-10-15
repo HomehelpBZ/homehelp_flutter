@@ -7,6 +7,7 @@ import '../../../l10n/language_provider.dart';
 import '../../../services/admin_service.dart';
 import '../welcome_screen.dart';
 import 'admin_review_screen.dart';
+import 'admin_reviews_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -73,6 +74,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.w500)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AdminReviewsScreen())),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(children: const [
+                            Icon(Icons.star_outline,
+                                size: 14, color: Colors.white),
+                            SizedBox(width: 5),
+                            Text('Reviews',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 12)),
+                          ]),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       GestureDetector(
                         onTap: _signOut,
                         child: Container(

@@ -5,6 +5,10 @@ import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/user_service.dart';
+import '../../models/hire.dart';
+import '../../services/hire_service.dart';
+import '../../widgets/hire_widgets.dart';
+import 'hire_request_screen.dart';
 
 class HkMessagesScreen extends StatefulWidget {
   const HkMessagesScreen({super.key});
@@ -153,14 +157,79 @@ class _HkChatScreenState extends State<HkChatScreen> {
   final _svc = UserService();
   bool _sending = false;
   String? _hkName;
+  late final Stream<QuerySnapshot> _messages;
+  late final Stream<Hire?> _hire;
 
   String get _hkUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   void initState() {
     super.initState();
+    _messages = _svc.getMessages(widget.familyUid, _hkUid);
+    _hire = HireService().watchHire(widget.familyUid, _hkUid);
     _svc.getHkName(_hkUid).then((name) => _hkName = name, onError: (_) {});
     _markRead();
+  }
+
+  Future<void> _cancelHire(Hire hire) async {
+    final s = LanguageProvider.strings(context);
+    final ok = await showConfirmDialog(
+      context,
+      title: s.cancelHireTitle,
+      body: '${hireSummaryText(hire, s)}\n\n${s.cancelHireNote}',
+      confirmLabel: s.yesCancel,
+      cancelLabel: s.keepIt,
+      destructive: true,
+    );
+    if (!ok) return;
+    try {
+      await HireService().cancel(
+        familyUid: widget.familyUid,
+        hkUid: _hkUid,
+        byUid: _hkUid,
+        noticeText: s.noticeHireCancelled,
+      );
+    } catch (e) {
+      debugPrint('Cancel hire failed: $e');
+      if (mounted) showErrorToast(context, s.errGeneric);
+    }
+  }
+
+  // Status strip above the message box; nothing until the family sends a
+  // hire request.
+  Widget _hireBar(s) {
+    return StreamBuilder<Hire?>(
+      stream: _hire,
+      builder: (context, snap) {
+        final hire = snap.data;
+        if (hire == null || !hire.isOpen) return const SizedBox.shrink();
+        final summary = hireSummaryText(hire, s);
+        if (hire.isPending) {
+          return HireStatusBar(
+            icon: Icons.mark_email_unread_outlined,
+            title: s.hireRequestFrom(widget.familyName),
+            subtitle: summary,
+            actions: [
+              hireBarButton(
+                  s.viewRequest,
+                  () => Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => HireRequestScreen(
+                          hire: hire, familyName: widget.familyName))),
+                  primary: true),
+            ],
+          );
+        }
+        return HireStatusBar(
+          icon: Icons.handshake_outlined,
+          title: s.hiredHk(widget.familyName),
+          subtitle: summary,
+          actions: [
+            if (hire.canCancel(DateTime.now()))
+              hireBarButton(s.cancelHire, () => _cancelHire(hire)),
+          ],
+        );
+      },
+    );
   }
 
   String _formatTime(Timestamp? ts) {
@@ -256,7 +325,7 @@ class _HkChatScreenState extends State<HkChatScreen> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _svc.getMessages(widget.familyUid, _hkUid),
+              stream: _messages,
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -279,9 +348,11 @@ class _HkChatScreenState extends State<HkChatScreen> {
                   itemCount: docs.length,
                   itemBuilder: (context, i) {
                     final data = docs[i].data() as Map<String, dynamic>;
+                    final notice = hireNoticeLabel(data['kind'] as String?, s);
+                    if (notice != null) return HireNoticeChip(label: notice);
                     final isMe = data['senderUid'] == _hkUid;
                     final text = data['text'] as String? ?? '';
-                    final time = _formatTime(data['sentAt'] as Timestamp?);
+                    final time = _formatTime(data['createdAt'] as Timestamp?);
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
@@ -320,6 +391,7 @@ class _HkChatScreenState extends State<HkChatScreen> {
               },
             ),
           ),
+          _hireBar(s),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: const BoxDecoration(

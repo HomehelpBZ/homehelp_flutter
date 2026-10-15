@@ -34,6 +34,7 @@ class AppStrings {
   String get submit => isAmharic ? 'አስረክብ' : 'Submit';
   String get done => isAmharic ? 'ተጠናቋል' : 'Done';
   String get optional => isAmharic ? '(አማራጭ)' : '(optional)';
+  String get loading => isAmharic ? 'እባክዎ ይጠብቁ…' : 'Please wait…';
   String get yes => isAmharic ? 'አዎ' : 'Yes';
   String get no => isAmharic ? 'አይ' : 'No';
 
@@ -102,6 +103,12 @@ class AppStrings {
   String get errMessageNotSent => isAmharic
       ? 'መልዕክቱ አልተላከም። እባክዎ እንደገና ይሞክሩ።'
       : 'Message not sent. Please try again.';
+  String get errReviewNotSaved => isAmharic
+      ? 'ግምገማው አልተቀመጠም። እባክዎ እንደገና ይሞክሩ።'
+      : 'Review not saved. Please try again.';
+  String get errAlreadyReviewed => isAmharic
+      ? 'ይህንን የቤት ሰራተኛ አስቀድመው ገምግመዋል።'
+      : 'You already reviewed this housekeeper.';
   String get errSendCodeFailed => isAmharic
       ? 'የማረጋገጫ ኮድ መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ።'
       : 'Failed to send verification code. Please try again.';
@@ -257,19 +264,6 @@ class AppStrings {
   String get home => isAmharic ? 'መነሻ' : 'Home';
   String get settings => isAmharic ? 'ቅንብሮች' : 'Settings';
 
-  // ── Notifications ────────────────────────────────────────────────────────
-  String get notif1 => isAmharic
-      ? 'የቀበደ ቤተሰብ መልዕክት ላኩልዎት'
-      : 'The Kebede Family sent you a message';
-  String get notif2 => isAmharic
-      ? 'አቶ ግርማ ቤተሰብ መገለጫዎን ተመለከቱ'
-      : 'Ato Girma Household viewed your profile';
-  String get notif3 => isAmharic
-      ? 'መገለጫዎ ጸድቋል እና አሁን ቀጥሎ ነው'
-      : 'Your profile was approved and is now live';
-  String get notifTime1 => isAmharic ? 'ከ2 ሰዓት በፊት' : '2 hours ago';
-  String get notifTime2 => isAmharic ? 'ከ5 ሰዓት በፊት' : '5 hours ago';
-  String get notifTime3 => isAmharic ? 'ከ3 ቀን በፊት' : '3 days ago';
 
   // ── Messages / Chat ──────────────────────────────────────────────────────
   String get familiesInterested =>
@@ -601,4 +595,114 @@ class AppStrings {
   String get statCity => isAmharic ? 'አዲስ አበባ' : 'Addis Ababa';
   String get statCityValue => isAmharic ? 'አ.አ' : 'AA';
 
+
+  // ── Hiring ────────────────────────────────────────────────────────────────
+  String get hireBtn => isAmharic ? 'ቅጠር' : 'Hire';
+  String hireTitle(String name) => isAmharic ? '$nameን ይቅጠሩ' : 'Hire $name';
+  String get hireStartDate => isAmharic ? 'የሚጀመርበት ቀን' : 'Start date';
+  String get hireMonthlySalary => isAmharic ? 'ወርሃዊ ደመወዝ (ብር)' : 'Monthly salary (Birr)';
+  String get selectDate => isAmharic ? 'ቀን ይምረጡ' : 'Select a date';
+  String hireFormNote(String name) => isAmharic
+      ? '$name ይህን ጥያቄ በመልዕክት ያዩታል። ቅጥሩ የሚረጋገጠው እነሱ ሲቀበሉት ብቻ ነው።'
+      : '$name will see this request in your chat. The hire is only confirmed once they accept it.';
+  String get sendHireRequest => isAmharic ? 'የቅጥር ጥያቄ ላክ' : 'Send hire request';
+  String get sendHireRequestTitle => isAmharic ? 'የቅጥር ጥያቄ ይላክ?' : 'Send hire request?';
+  String get errPickStartDate => isAmharic ? 'የሚጀመርበትን ቀን ይምረጡ' : 'Pick a start date';
+  String get errEnterSalary => isAmharic ? 'ወርሃዊ ደመወዙን ያስገቡ' : 'Enter the monthly salary';
+  String get errHireNotSent => isAmharic
+      ? 'የቅጥር ጥያቄው አልተላከም። እባክዎ እንደገና ይሞክሩ።'
+      : 'Hire request not sent. Please try again.';
+  String hireSummary(String date, String salary) => isAmharic
+      ? 'ከ$date ጀምሮ · በወር $salary ብር'
+      : 'Starts $date · $salary Birr/month';
+  String hirePendingFamily(String name) => isAmharic
+      ? 'የቅጥር ጥያቄ ተልኳል። $name እስኪቀበሉ በመጠበቅ ላይ።'
+      : 'Hire request sent. Waiting for $name to accept.';
+  String hiredFamily(String name) => isAmharic ? '$nameን ቀጥረዋል' : 'You hired $name';
+  String hiredHk(String family) => isAmharic ? 'በ$family ተቀጥረዋል' : 'Hired by $family';
+  String hireRequestFrom(String family) =>
+      isAmharic ? '$family ሊቀጥርዎ ይፈልጋል' : '$family wants to hire you';
+  String get viewRequest => isAmharic ? 'ጥያቄውን ይመልከቱ' : 'View request';
+  String get cancelRequest => isAmharic ? 'ጥያቄውን ሰርዝ' : 'Cancel request';
+  String get cancelHire => isAmharic ? 'ቅጥሩን ሰርዝ' : 'Cancel hire';
+  String get cancelHireTitle => isAmharic ? 'ይህ ቅጥር ይሰረዝ?' : 'Cancel this hire?';
+  String get cancelHireNote => isAmharic
+      ? 'ሌላኛው ወገን በመልዕክት ይነገራቸዋል።'
+      : 'The other side will be told in the chat.';
+  String get yesCancel => isAmharic ? 'አዎ፣ ሰርዝ' : 'Yes, cancel';
+  String get keepIt => isAmharic ? 'አይ፣ ይቆይ' : 'No, keep it';
+  String get hireRequestTitle => isAmharic ? 'የቅጥር ጥያቄ' : 'Hire request';
+  String hireRequestIntro(String family) => isAmharic
+      ? '$family በHomeHelp በኩል ሊቀጥርዎ ይፈልጋል።'
+      : '$family wants to hire you through HomeHelp.';
+  String get hireRequestWarning => isAmharic
+      ? 'ይህን ሥራ ከቤተሰቡ ጋር ከተስማሙ ብቻ ይቀበሉ። ሥራ ከጀመሩ በኋላ ቤተሰቡ ሊገመግምዎ ይችላል።'
+      : 'Only accept if you have agreed on this job with the family. After you start, the family can review you.';
+  String get acceptJob => isAmharic ? 'አዎ፣ ይህን ሥራ እቀበላለሁ' : 'Yes, I accept this job';
+  String get declineJob => isAmharic ? 'አልቀበልም' : 'Decline';
+  String get acceptJobTitle => isAmharic ? 'ይህን ሥራ ይቀበላሉ?' : 'Accept this job?';
+  String acceptJobNote(String family) => isAmharic
+      ? '$family እንደተቀበሉ ይነገራቸዋል።'
+      : '$family will be told you accepted.';
+  String get yesAccept => isAmharic ? 'አዎ፣ እቀበላለሁ' : 'Yes, accept';
+  String get declineJobTitle => isAmharic ? 'ይህን ጥያቄ አይቀበሉም?' : 'Decline this request?';
+  String get yesDecline => isAmharic ? 'አዎ፣ አልቀበልም' : 'Yes, decline';
+  String get goBack => isAmharic ? 'ተመለስ' : 'Go back';
+  String get writeReview => isAmharic ? 'ግምገማ ይጻፉ' : 'Write a review';
+  String reviewOpensOn(String name, String date) => isAmharic
+      ? '$nameን ከ$date ጀምሮ መገምገም ይችላሉ'
+      : 'You can review $name from $date';
+  String youReviewed(String name) =>
+      isAmharic ? '$nameን ገምግመዋል' : 'You reviewed $name';
+
+  // Notices posted into the chat (also the chat-list preview).
+  String noticeHireRequested(String date, String salary) => isAmharic
+      ? 'የቅጥር ጥያቄ፦ ከ$date ጀምሮ፣ በወር $salary ብር'
+      : 'Hire request: starts $date, $salary Birr/month';
+  String get noticeHireAccepted => isAmharic ? 'የቅጥር ጥያቄው ተቀባይነት አግኝቷል' : 'Hire request accepted';
+  String get noticeHireDeclined => isAmharic ? 'የቅጥር ጥያቄው ውድቅ ሆኗል' : 'Hire request declined';
+  String get noticeHireCancelled => isAmharic ? 'ቅጥሩ ተሰርዟል' : 'Hire cancelled';
+  String get noticeHireRequestedShort => isAmharic ? 'የቅጥር ጥያቄ ተልኳል' : 'Hire request sent';
+
+  // ── Reviews list ──────────────────────────────────────────────────────────
+  String get noReviewsYet => isAmharic ? 'እስካሁን ምንም ግምገማ የለም' : 'No reviews yet';
+  String replyFrom(String name) => isAmharic ? 'የ$name ምላሽ' : 'Reply from $name';
+  String get replyBtn => isAmharic ? 'መልስ ስጥ' : 'Reply';
+  String get replyTitle => isAmharic ? 'ለግምገማው መልስ ይስጡ' : 'Reply to this review';
+  String get replyHint => isAmharic
+      ? 'አጭር እና ትሁት ይሁኑ። አንድ ጊዜ ብቻ መመለስ ይችላሉ፣ መልሱ አይስተካከልም።'
+      : 'Keep it short and polite. You can reply once, and replies can\'t be edited.';
+  String get sendReply => isAmharic ? 'መልስ ላክ' : 'Send reply';
+  String get errReplyNotSent => isAmharic
+      ? 'መልሱ አልተላከም። እባክዎ እንደገና ይሞክሩ።'
+      : 'Reply not sent. Please try again.';
+  String get yourReviewTag => isAmharic ? 'የእርስዎ ግምገማ' : 'Your review';
+  String get editReview => isAmharic ? 'ግምገማውን አስተካክል' : 'Edit review';
+  String get editReply => isAmharic ? 'መልሱን አስተካክል' : 'Edit reply';
+  String get edited => isAmharic ? 'ተስተካክሏል' : 'edited';
+  String get reviewRemovedNote => isAmharic
+      ? 'ግምገማዎ የHomeHelp ደንቦችን ስለጣሰ በአስተዳዳሪ ተወግዷል።'
+      : 'Your review was removed by HomeHelp for breaking the review rules.';
+
+  // ── Find a housekeeper ────────────────────────────────────────────────────
+  String reviewCountLabel(int n) => isAmharic
+      ? '$n ግምገማ'
+      : n == 1 ? '1 review' : '$n reviews';
+
+  // ── HK home notifications ─────────────────────────────────────────────────
+  String notifNewMessages(String family, int n) => isAmharic
+      ? '$family $n አዲስ መልዕክት ላኩልዎት'
+      : n == 1
+          ? '$family sent you a message'
+          : '$family sent you $n new messages';
+  String notifNewReview(String family, int stars) => isAmharic
+      ? '$family $stars ኮከብ ግምገማ ሰጥተዎታል'
+      : '$family left you a $stars-star review';
+  String get notifReplyHint => isAmharic ? 'መልስ ለመስጠት ይንኩ' : 'Tap to reply';
+  String get family => isAmharic ? 'አንድ ቤተሰብ' : 'A family';
+  String get noNotifications => isAmharic ? 'ምንም ማሳወቂያ የለም' : 'No notifications yet';
+  String get justNow => isAmharic ? 'አሁን' : 'Just now';
+  String minutesAgo(int n) => isAmharic ? 'ከ$n ደቂቃ በፊት' : '$n min ago';
+  String hoursAgo(int n) => isAmharic ? 'ከ$n ሰዓት በፊት' : n == 1 ? '1 hour ago' : '$n hours ago';
+  String daysAgo(int n) => isAmharic ? 'ከ$n ቀን በፊት' : n == 1 ? '1 day ago' : '$n days ago';
 }

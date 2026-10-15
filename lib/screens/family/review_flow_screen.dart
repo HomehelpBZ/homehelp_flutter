@@ -2,27 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
+import '../../l10n/app_strings.dart';
 import '../../l10n/language_provider.dart';
 import '../../models/housekeeper.dart';
 import '../../services/user_service.dart';
-import '../family/browse_screen.dart';
 
 class ReviewFlowScreen extends StatefulWidget {
   final Housekeeper hk;
-  const ReviewFlowScreen({super.key, required this.hk});
+  // The family's review, when editing it (allowed for 48 hours).
+  final Map<String, dynamic>? existing;
+  const ReviewFlowScreen({super.key, required this.hk, this.existing});
 
   @override
   State<ReviewFlowScreen> createState() => _ReviewFlowScreenState();
 }
 
 class _ReviewFlowScreenState extends State<ReviewFlowScreen> {
-  int _step = 0;
+  // Step 0 (hire confirmation) is skipped: the hire is now confirmed in the
+  // chat, and this screen only opens once a review is allowed.
+  int _step = 1;
   int _starRating = 0;
   bool? _wouldHireAgain;
   final Set<int> _selectedTagIndexes = {};
   final _reviewController = TextEditingController();
   bool _submitting = false;
   final _svc = UserService();
+
+  bool get _editing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final r = widget.existing;
+    if (r == null) return;
+    _starRating = (r['starRating'] as num?)?.toInt() ?? 0;
+    _wouldHireAgain = r['wouldHireAgain'] as bool?;
+    _reviewController.text = r['reviewText'] as String? ?? '';
+    // Tags are saved in the language used at the time; match either one.
+    final saved = (r['tags'] as List?)?.cast<String>() ?? const <String>[];
+    final en = AppStrings('en').tagOptions;
+    final am = AppStrings('am').tagOptions;
+    for (var i = 0; i < en.length; i++) {
+      if (saved.contains(en[i]) || (i < am.length && saved.contains(am[i]))) {
+        _selectedTagIndexes.add(i);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -36,18 +61,36 @@ class _ReviewFlowScreenState extends State<ReviewFlowScreen> {
       final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
       final tags = s.tagOptions as List<String>;
       final selectedTags = _selectedTagIndexes.map((i) => tags[i]).toList();
-      await _svc.submitReview(
-        hkUid: widget.hk.id,
-        familyUid: uid,
-        familyName: '',
-        starRating: _starRating,
-        wouldHireAgain: _wouldHireAgain,
-        tags: selectedTags,
-        reviewText: _reviewController.text.trim(),
-      );
+      if (_editing) {
+        await _svc.updateReview(
+          familyUid: uid,
+          hkUid: widget.hk.id,
+          starRating: _starRating,
+          wouldHireAgain: _wouldHireAgain,
+          tags: selectedTags,
+          reviewText: _reviewController.text.trim(),
+        );
+      } else {
+        final familyName = await _svc.getFamilyName(uid) ?? '';
+        await _svc.submitReview(
+          hkUid: widget.hk.id,
+          familyUid: uid,
+          familyName: familyName,
+          starRating: _starRating,
+          wouldHireAgain: _wouldHireAgain,
+          tags: selectedTags,
+          reviewText: _reviewController.text.trim(),
+        );
+      }
       if (mounted) setState(() { _step = 4; _submitting = false; });
-    } catch (_) {
-      if (mounted) setState(() => _submitting = false);
+    } catch (e) {
+      debugPrint('Review not saved (hk ${widget.hk.id}): $e');
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      final alreadyReviewed =
+          e is FirebaseException && e.code == UserService.alreadyReviewedCode;
+      showErrorToast(
+          context, alreadyReviewed ? s.errAlreadyReviewed : s.errReviewNotSaved);
     }
   }
 
@@ -62,12 +105,12 @@ class _ReviewFlowScreenState extends State<ReviewFlowScreen> {
       appBar: AppBar(
         title: Text(_stepTitle(s)),
         actions: const [LangToggleButton()],
-        leading: _step > 0
+        leading: _step > 1 && _step < 4
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => setState(() => _step--))
             : null,
-        automaticallyImplyLeading: _step > 0,
+        automaticallyImplyLeading: _step < 4,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -156,7 +199,7 @@ class _ReviewFlowScreenState extends State<ReviewFlowScreen> {
           onPressed: _starRating > 0 ? () => setState(() => _step = 2) : null,
         ),
         const SizedBox(height: 10),
-        SecondaryButton(label: s.backBtn, onPressed: () => setState(() => _step = 0)),
+        SecondaryButton(label: s.backBtn, onPressed: () => Navigator.pop(context)),
       ],
     );
   }
@@ -307,12 +350,8 @@ class _ReviewFlowScreenState extends State<ReviewFlowScreen> {
           ),
           const SizedBox(height: 24),
           PrimaryButton(
-            label: s.backToBrowse,
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const BrowseScreen()),
-              (r) => false,
-            ),
+            label: s.goBack,
+            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),

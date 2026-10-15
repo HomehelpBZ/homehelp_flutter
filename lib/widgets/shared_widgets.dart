@@ -142,7 +142,7 @@ class StarRating extends StatelessWidget {
       children: [
         Icon(Icons.star, size: starSize, color: const Color(0xFFEF9F27)),
         const SizedBox(width: 3),
-        Text('$rating ($reviewCount)',
+        Text('${rating.toStringAsFixed(1)} ($reviewCount)',
             style: TextStyle(fontSize: starSize - 1, color: AppTheme.grey600)),
       ],
     );

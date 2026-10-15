@@ -68,8 +68,8 @@ class _SavedScreenState extends State<SavedScreen> {
                     final name = data['fullName'] as String? ?? '';
                     final region = data['region'] as String? ?? '';
                     final exp = data['experienceYears'] as String? ?? '0';
-                    final rating = (data['rating'] as num?)?.toDouble() ?? 0.0;
-                    final reviewCount = (data['reviewCount'] as num?)?.toInt() ?? 0;
+                    final rating = (data[UserService.ratingAverageField] as num?)?.toDouble() ?? 0.0;
+                    final reviewCount = (data[UserService.ratingCountField] as num?)?.toInt() ?? 0;
                     final initials = name.split(' ')
                         .where((w) => w.isNotEmpty).take(2)
                         .map((w) => w[0].toUpperCase()).join();

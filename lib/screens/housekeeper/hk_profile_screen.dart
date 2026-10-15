@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/user_service.dart';
+import '../../widgets/reviews_section.dart';
 import 'hk_edit_profile_screen.dart';
 import 'hk_settings_screen.dart';
 import 'guarantor_id_screen.dart';
@@ -241,11 +242,11 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                       color: Colors.white.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8)),
                     child: Row(children: [
-                      _Stat('${p['ratingAverage'] ?? 0}',
+                      _Stat(UserService.ratingText(p),
                           s.rating),
                       _Stat('0', s.views),
                       _Stat('0', s.messages),
-                      _Stat('${p['ratingCount'] ?? 0}',
+                      _Stat('${p[UserService.ratingCountField] ?? 0}',
                           s.reviewsLabel),
                     ]),
                   ),
@@ -543,6 +544,12 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                     const SizedBox(height: 16),
                   ],
 
+                  // Reviews from families, with a Reply button on each.
+                  if (FirebaseAuth.instance.currentUser != null)
+                    ReviewsSection(
+                        hkUid: FirebaseAuth.instance.currentUser!.uid,
+                        hkName: name,
+                        canReply: true),
                   const SizedBox(height: 20),
                 ],
               ),

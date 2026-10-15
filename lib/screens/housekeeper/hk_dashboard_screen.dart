@@ -7,6 +7,7 @@ import '../../services/user_service.dart';
 import '../../models/job.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'hk_messages_screen.dart';
+import '../../widgets/hk_notifications.dart';
 import 'hk_profile_screen.dart';
 import 'hk_settings_screen.dart';
 import 'job_board_screen.dart';
@@ -185,7 +186,7 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
                       children: [
                         _Stat('24', s.views),
                         _Stat('3', s.messages),
-                        _Stat('4.9', s.rating),
+                        _Stat(UserService.ratingText(_hkProfile), s.rating),
                       ],
                     ),
                   ),
@@ -256,15 +257,19 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
                           fontWeight: FontWeight.w500,
                           color: AppTheme.grey800)),
                   const SizedBox(height: 8),
-                  ...[
-                    (s.notif1, s.notifTime1, true),
-                    (s.notif2, s.notifTime2, true),
-                    (s.notif3, s.notifTime3, false),
-                  ].map((n) => _NotifRow(
-                        text: n.$1,
-                        time: n.$2,
-                        isUnread: n.$3,
-                      )),
+                  HkNotificationsList(
+                    hkUid: FirebaseAuth.instance.currentUser?.uid,
+                    onTap: (n) => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => n.isReview
+                            ? const HkProfileScreen()
+                            : HkChatScreen(
+                                familyName: n.familyName ?? '',
+                                familyUid: n.familyUid ?? ''),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -513,59 +518,3 @@ class _Stat extends StatelessWidget {
   }
 }
 
-// ── Notification row ──────────────────────────────────────────────────────────
-class _NotifRow extends StatelessWidget {
-  final String text;
-  final String time;
-  final bool isUnread;
-  const _NotifRow(
-      {required this.text, required this.time, required this.isUnread});
-
-  String _getInitials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: const BoxDecoration(
-        border: Border(
-            bottom: BorderSide(color: Color(0xFFEEEEEE), width: 0.5)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 8, height: 8,
-            margin: const EdgeInsets.only(top: 5),
-            decoration: BoxDecoration(
-              color: isUnread ? AppTheme.primary : AppTheme.grey200,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(text,
-                    style: const TextStyle(
-                        fontSize: 13, color: AppTheme.grey800)),
-                const SizedBox(height: 2),
-                Text(time,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppTheme.grey400)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

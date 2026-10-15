@@ -90,8 +90,8 @@ class UserService {
       'skills': [],
       'languages': [],
       'education': null,
-      'ratingAverage': 0.0,
-      'ratingCount': 0,
+      ratingAverageField: 0.0,
+      ratingCountField: 0,
       'jobsCompleted': 0,
       'responseRate': 0.0,
       'profileCompleted': false,
@@ -488,6 +488,40 @@ class UserService {
   }
 
   // ── Reviews ───────────────────────────────────────────────────────────────
+  // Rating fields on housekeeperProfiles (set to 0 when the profile is created).
+  static const ratingAverageField = 'ratingAverage';
+  static const ratingCountField = 'ratingCount';
+
+  // Thrown by submitReview when this family already reviewed this housekeeper.
+  static const alreadyReviewedCode = 'already-reviewed';
+
+  // One review per family per housekeeper; firestore.rules relies on this id.
+  static String reviewId(String familyUid, String hkUid) => '${familyUid}_$hkUid';
+
+  // Rating fields after adding one star rating to a housekeeper profile.
+  // The average is stored unrounded so it stays exact; round it for display.
+  static Map<String, dynamic> ratingAfterReview(
+      Map<String, dynamic>? profile, int starRating) {
+    final count = (profile?[ratingCountField] as num?)?.toInt() ?? 0;
+    final avg = (profile?[ratingAverageField] as num?)?.toDouble() ?? 0.0;
+    final newCount = count + 1;
+    return {
+      ratingAverageField: (avg * count + starRating) / newCount,
+      ratingCountField: newCount,
+    };
+  }
+
+  // "4.7" style text for a profile's rating, or "0" if it has none yet.
+  static String ratingText(Map<String, dynamic>? profile) {
+    final avg = (profile?[ratingAverageField] as num?)?.toDouble() ?? 0.0;
+    return avg == 0 ? '0' : avg.toStringAsFixed(1);
+  }
+
+  Future<bool> hasReviewed(String familyUid, String hkUid) async =>
+      (await _db.collection('reviews').doc(reviewId(familyUid, hkUid)).get())
+          .exists;
+
+  // Saves the review and updates the housekeeper's rating in one transaction.
   Future<void> submitReview({
     required String hkUid,
     required String familyUid,
@@ -497,37 +531,181 @@ class UserService {
     required List<String> tags,
     required String reviewText,
   }) async {
-    final ref = _db.collection('reviews').doc();
-    await ref.set({
-      'hkUid': hkUid,
-      'familyUid': familyUid,
-      'familyName': familyName,
-      'starRating': starRating,
-      'wouldHireAgain': wouldHireAgain,
-      'tags': tags,
-      'reviewText': reviewText,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    // Update HK profile with new average rating
-    final existing = await _db.collection('reviews')
-        .where('hkUid', isEqualTo: hkUid).get();
-    final ratings = existing.docs
-        .map((d) => (d.data()['starRating'] as num).toDouble())
-        .toList();
-    if (ratings.isNotEmpty) {
-      final avg = ratings.reduce((a, b) => a + b) / ratings.length;
-      await _db.collection('housekeeperProfiles').doc(hkUid).update({
-        'rating': double.parse(avg.toStringAsFixed(1)),
-        'reviewCount': ratings.length,
+    final reviewRef = _db.collection('reviews').doc(reviewId(familyUid, hkUid));
+    final hkRef = _db.collection('housekeeperProfiles').doc(hkUid);
+    await _db.runTransaction((tx) async {
+      final existing = await tx.get(reviewRef);
+      if (existing.exists) {
+        throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: alreadyReviewedCode,
+          message: 'You already reviewed this housekeeper.',
+        );
+      }
+      final hkSnap = await tx.get(hkRef);
+      tx.set(reviewRef, {
+        'hkUid': hkUid,
+        'familyUid': familyUid,
+        'familyName': familyName,
+        'starRating': starRating,
+        'wouldHireAgain': wouldHireAgain,
+        'tags': tags,
+        'reviewText': reviewText,
+        'createdAt': FieldValue.serverTimestamp(),
       });
+      tx.update(hkRef, ratingAfterReview(hkSnap.data(), starRating));
+    });
+  }
+
+  // Rating fields after taking one star rating out (an admin removed it).
+  static Map<String, dynamic> ratingAfterRemoval(
+      Map<String, dynamic>? profile, int starRating) {
+    final count = (profile?[ratingCountField] as num?)?.toInt() ?? 0;
+    final avg = (profile?[ratingAverageField] as num?)?.toDouble() ?? 0.0;
+    if (count <= 1) return {ratingAverageField: 0.0, ratingCountField: 0};
+    final newCount = count - 1;
+    return {
+      ratingAverageField: (avg * count - starRating) / newCount,
+      ratingCountField: newCount,
+    };
+  }
+
+  // Rating fields after a family changes their stars from [oldStars].
+  static Map<String, dynamic> ratingAfterEdit(
+      Map<String, dynamic>? profile, int oldStars, int newStars) {
+    final count = (profile?[ratingCountField] as num?)?.toInt() ?? 0;
+    final avg = (profile?[ratingAverageField] as num?)?.toDouble() ?? 0.0;
+    if (count == 0) return {ratingAverageField: avg, ratingCountField: 0};
+    return {
+      ratingAverageField: (avg * count - oldStars + newStars) / count,
+      ratingCountField: count,
+    };
+  }
+
+  // Families can edit their review, and housekeepers their reply, for this
+  // long. firestore.rules has the same 48 hours.
+  static const editWindow = Duration(hours: 48);
+
+  // Whether something written at [writtenAt] can still be edited.
+  static bool canEdit(Timestamp? writtenAt, DateTime now) =>
+      writtenAt != null && now.isBefore(writtenAt.toDate().add(editWindow));
+
+  // Family edits their review (within editWindow). Reviews can't be deleted.
+  Future<void> updateReview({
+    required String familyUid,
+    required String hkUid,
+    required int starRating,
+    required bool? wouldHireAgain,
+    required List<String> tags,
+    required String reviewText,
+  }) async {
+    final reviewRef = _db.collection('reviews').doc(reviewId(familyUid, hkUid));
+    final hkRef = _db.collection('housekeeperProfiles').doc(hkUid);
+    await _db.runTransaction((tx) async {
+      final review = await tx.get(reviewRef);
+      final hkSnap = await tx.get(hkRef);
+      final oldStars = (review.data()!['starRating'] as num).toInt();
+      tx.update(reviewRef, {
+        'starRating': starRating,
+        'wouldHireAgain': wouldHireAgain,
+        'tags': tags,
+        'reviewText': reviewText,
+        'editedAt': FieldValue.serverTimestamp(),
+      });
+      if (oldStars != starRating) {
+        tx.update(hkRef, ratingAfterEdit(hkSnap.data(), oldStars, starRating));
+      }
+    });
+  }
+
+  // Admin hides an abusive review and takes it out of the rating. The review
+  // stays stored, so the family can't simply post it again.
+  Future<void> removeReview({
+    required String reviewDocId,
+    required String adminUid,
+    required String reason,
+  }) async {
+    final reviewRef = _db.collection('reviews').doc(reviewDocId);
+    await _db.runTransaction((tx) async {
+      final review = await tx.get(reviewRef);
+      final data = review.data();
+      if (data == null || data['removed'] == true) return;
+      final hkRef = _db.collection('housekeeperProfiles').doc(data['hkUid'] as String);
+      final hkSnap = await tx.get(hkRef);
+      tx.update(reviewRef, {
+        'removed': true,
+        'removedAt': FieldValue.serverTimestamp(),
+        'removedBy': adminUid,
+        'removedReason': reason,
+      });
+      tx.update(hkRef,
+          ratingAfterRemoval(hkSnap.data(), (data['starRating'] as num).toInt()));
+    });
+  }
+
+  // Whether this user is listed in /admins (added in the Firebase console).
+  Future<bool> isAdmin(String uid) async {
+    try {
+      return (await _db.collection('admins').doc(uid).get()).exists;
+    } catch (_) {
+      return false;
     }
   }
 
-  Future<List<Map<String, dynamic>>> getHkReviews(String hkUid) async {
-    final snap = await _db.collection('reviews')
+  // Housekeeper's one reply to a review, editable within editWindow.
+  static const responseMaxLength = 300;
+
+  Future<void> respondToReview(String reviewDocId, String text) {
+    return _db.collection('reviews').doc(reviewDocId).update({
+      'response': {
+        'text': text,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+    });
+  }
+
+  // Keeps the reply's original date; firestore.rules checks it.
+  Future<void> editResponse(
+      String reviewDocId, String text, Timestamp repliedAt) {
+    return _db.collection('reviews').doc(reviewDocId).update({
+      'response': {
+        'text': text,
+        'createdAt': repliedAt,
+        'editedAt': FieldValue.serverTimestamp(),
+      },
+    });
+  }
+
+  // Reviews hidden by an admin aren't shown anywhere.
+  static List<Map<String, dynamic>> visibleReviews(
+          List<Map<String, dynamic>> reviews) =>
+      reviews.where((r) => r['removed'] != true).toList();
+
+  // All visible reviews of a housekeeper, newest first.
+  Stream<List<Map<String, dynamic>>> watchHkReviews(String hkUid) {
+    return _db
+        .collection('reviews')
         .where('hkUid', isEqualTo: hkUid)
-        .get();
-    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+        .snapshots()
+        .map((snap) => sortNewestFirst(
+            visibleReviews(snap.docs.map((d) => {'id': d.id, ...d.data()}).toList()),
+            field: 'createdAt'));
+  }
+
+  // Every review, newest first, for the admin panel (removed ones included).
+  Stream<List<Map<String, dynamic>>> watchAllReviews() {
+    return _db.collection('reviews').snapshots().map((snap) => sortNewestFirst(
+        snap.docs.map((d) => {'id': d.id, ...d.data()}).toList(),
+        field: 'createdAt'));
+  }
+
+  // This family's review of this housekeeper (null if none).
+  Stream<Map<String, dynamic>?> watchReview(String familyUid, String hkUid) {
+    return _db
+        .collection('reviews')
+        .doc(reviewId(familyUid, hkUid))
+        .snapshots()
+        .map((d) => d.exists ? {'id': d.id, ...d.data()!} : null);
   }
 
   // ── Messaging ─────────────────────────────────────────────────────────────
@@ -543,6 +721,7 @@ class UserService {
     required String text,
     String? familyName,
     String? hkName,
+    String? kind, // set for hire notices (see HireService)
   }) async {
     final chatId = _chatId(familyUid, hkUid);
     final batch = _db.batch();
@@ -551,6 +730,7 @@ class UserService {
     batch.set(msgRef, {
       'senderUid': senderUid,
       'text': text,
+      if (kind != null) 'kind': kind,
       'createdAt': FieldValue.serverTimestamp(),
     });
     // Update chat thread metadata
@@ -640,6 +820,15 @@ class UserService {
             isFamily ? unreadFamilyField : unreadHkField));
   }
 
+  // Housekeeper's chats, live (for the home screen notifications).
+  Stream<List<Map<String, dynamic>>> watchHkChats(String hkUid) {
+    return _db
+        .collection('chats')
+        .where('hkUid', isEqualTo: hkUid)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
   static int sumUnread(Iterable<Map<String, dynamic>> chats, String field) =>
       chats.fold(0, (sum, c) {
         final n = (c[field] as num?)?.toInt() ?? 0;
@@ -647,9 +836,9 @@ class UserService {
       });
 
   static List<Map<String, dynamic>> sortNewestFirst(
-      List<Map<String, dynamic>> chats) {
+      List<Map<String, dynamic>> chats, {String field = 'lastMessageAt'}) {
     int millis(Map<String, dynamic> c) =>
-        (c['lastMessageAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+        (c[field] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
     return chats..sort((a, b) => millis(b).compareTo(millis(a)));
   }
 

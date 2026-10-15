@@ -7,6 +7,8 @@ import '../../models/housekeeper.dart';
 import 'family_chat_screen.dart';
 import 'family_messages_screen.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
+import '../../widgets/reviews_section.dart';
 
 class HkDetailScreen extends StatefulWidget {
   final String? uid;
@@ -216,9 +218,9 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
                       color: Colors.white.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8)),
                     child: Row(children: [
-                      _Stat('0', s.rating),
+                      _Stat(UserService.ratingText(p), s.rating),
                       _Stat(experience, s.experience),
-                      _Stat('0', s.reviewsLabel),
+                      _Stat('${p?[UserService.ratingCountField] ?? 0}', s.reviewsLabel),
                       _Stat('$salary ${s.birr}/mo', s.perMonth),
                     ]),
                   ),
@@ -363,6 +365,10 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
                     ),
                   ]),
                   const SizedBox(height: 16),
+                  if ((widget.uid ?? widget.hk?.id) != null)
+                    ReviewsSection(
+                        hkUid: widget.uid ?? widget.hk!.id, hkName: name),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
