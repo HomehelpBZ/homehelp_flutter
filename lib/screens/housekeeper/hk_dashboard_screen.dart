@@ -279,19 +279,18 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _tab,
-        onTap: (i) {
+        onTap: (i) async {
+          const pages = <Widget>[
+            JobBoardScreen(),
+            HkMessagesScreen(),
+            HkProfileScreen(),
+          ];
+          if (i == 0) return;
           setState(() => _tab = i);
-          if (i == 1) {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const JobBoardScreen()));
-          } else if (i == 2) {
-            Navigator.push(context,
-                MaterialPageRoute(
-                    builder: (_) => const HkMessagesScreen()));
-          } else if (i == 3) {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const HkProfileScreen()));
-          }
+          await Navigator.push(
+              context, MaterialPageRoute(builder: (_) => pages[i - 1]));
+          // Back on the dashboard: highlight Home again.
+          if (mounted) setState(() => _tab = 0);
         },
         items: [
           BottomNavigationBarItem(

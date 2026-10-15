@@ -112,7 +112,19 @@ class _JobBoardScreenState extends State<JobBoardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(alignment: Alignment.topRight, child: const LangToggleButton()),
+                  Row(children: [
+                    // Back to the dashboard (the job board is pushed from it).
+                    if (Navigator.of(context).canPop())
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    const Spacer(),
+                    const LangToggleButton(),
+                  ]),
                   const SizedBox(height: 6),
                   Text(s.jobBoard,
                       style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
