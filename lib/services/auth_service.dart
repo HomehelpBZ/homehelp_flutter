@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import '../l10n/app_strings.dart';
+import 'user_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth;
@@ -63,6 +64,46 @@ class AuthService {
       email: email,
       password: password,
     );
+  }
+
+  // Thrown by signInAs when the account belongs to the other role.
+  static const wrongRoleCode = 'wrong-account-role';
+
+  // Signs in, then signs back out unless the account may use [role]
+  // ('family' or 'housekeeper'), so a housekeeper can't enter the family app.
+  Future<UserCredential> signInAs({
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    final cred = await signInWithEmail(email: email, password: password);
+    final bool allowed;
+    try {
+      allowed = await UserService().canSignInAs(cred.user!.uid, role);
+    } catch (_) {
+      await _auth.signOut();
+      rethrow;
+    }
+    if (!allowed) {
+      await _auth.signOut();
+      throw FirebaseAuthException(code: wrongRoleCode);
+    }
+    return cred;
+  }
+
+  // Message for an error thrown by signInAs.
+  String friendlySignInError(Object error, AppStrings s, String role) {
+    if (error is FirebaseAuthException) {
+      if (error.code == wrongRoleCode) {
+        return role == 'family'
+            ? s.errNotFamilyAccount
+            : s.errNotHousekeeperAccount;
+      }
+      if (error.code == 'network-request-failed') return s.errNoInternet;
+      return s.errWrongPhoneOrPassword;
+    }
+    // Signed in, but the account lookup in Firestore failed.
+    return s.errGeneric;
   }
 
   // ── Phone OTP — Step 1: Send OTP ─────────────────────────────────────────

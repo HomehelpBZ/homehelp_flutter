@@ -535,9 +535,10 @@ class _HkSignInScreenState extends State<HkSignInScreen> {
     try {
       final fakeEmail =
           _authService.phoneToEmail(_phoneController.text);
-      await _authService.signInWithEmail(
+      await _authService.signInAs(
         email: fakeEmail,
         password: _passwordController.text,
+        role: 'housekeeper',
       );
 
       if (mounted) {
@@ -550,8 +551,8 @@ class _HkSignInScreenState extends State<HkSignInScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage =
-            LanguageProvider.strings(context).errWrongPhoneOrPassword;
+        _errorMessage = _authService.friendlySignInError(
+            e, LanguageProvider.strings(context), 'housekeeper');
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);

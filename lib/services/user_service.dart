@@ -652,6 +652,25 @@ class UserService {
     }
   }
 
+  // Whether this account signed up as [role] ('family' or 'housekeeper').
+  // Checks the roles list on /users, then the role's profile doc.
+  Future<bool> hasRole(String uid, String role) async {
+    final user = await _db.collection('users').doc(uid).get();
+    final roles = (user.data()?['roles'] as List?)?.cast<String>() ?? const [];
+    if (roles.contains(role)) return true;
+    final profiles = role == 'family' ? 'familyProfiles' : 'housekeeperProfiles';
+    return (await _db.collection(profiles).doc(uid).get()).exists;
+  }
+
+  // Whether this account may sign in as [role]. Only accounts known to be the
+  // other role are refused; ones with no user or profile doc (a sign-up whose
+  // save failed) are let through.
+  Future<bool> canSignInAs(String uid, String role) async {
+    if (await hasRole(uid, role)) return true;
+    final other = role == 'family' ? 'housekeeper' : 'family';
+    return !await hasRole(uid, other);
+  }
+
   // Housekeeper's one reply to a review, editable within editWindow.
   static const responseMaxLength = 300;
 

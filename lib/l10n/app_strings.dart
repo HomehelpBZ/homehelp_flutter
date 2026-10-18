@@ -115,6 +115,12 @@ class AppStrings {
   String get errProfileSaveFailed => isAmharic
       ? 'መለያዎ ተፈጥሯል፣ ነገር ግን መገለጫዎን ማስቀመጥ አልተቻለም። ግንኙነትዎን ያረጋግጡና እንደገና ለመሞከር "አረጋግጥ"ን ይጫኑ።'
       : "Your account was created, but we couldn't save your profile. Check your connection and tap Verify to try again.";
+  String get errNotFamilyAccount => isAmharic
+      ? 'ይህ ቁጥር በቤት ሰራተኛ መለያ ተመዝግቧል። እባክዎ እንደ ቤት ሰራተኛ ይግቡ።'
+      : 'This number is registered as a housekeeper account. Please sign in as a housekeeper.';
+  String get errNotHousekeeperAccount => isAmharic
+      ? 'ይህ ቁጥር በቤተሰብ መለያ ተመዝግቧል። እባክዎ እንደ ቤተሰብ ይግቡ።'
+      : 'This number is registered as a family account. Please sign in as a family.';
   String get errGeneric => isAmharic
       ? 'የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።'
       : 'Something went wrong. Please try again.';

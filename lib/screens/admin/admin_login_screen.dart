@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/shared_widgets.dart';
 import '../../../l10n/language_provider.dart';
+import '../../../services/user_service.dart';
 import '../welcome_screen.dart';
 import 'admin_dashboard_screen.dart';
 
@@ -34,10 +35,20 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      // Only accounts listed in /admins may open the admin panel.
+      if (!await UserService().isAdmin(cred.user!.uid)) {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          setState(() => _errorMessage =
+              'This account does not have admin access.');
+        }
+        return;
+      }
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
