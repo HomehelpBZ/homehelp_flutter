@@ -167,8 +167,18 @@ class _HkDashboardScreenState extends State<HkDashboardScreen> {
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500)),
                             const SizedBox(height: 3),
-                            _StatusBadge(
-                                status: _hkProfile?['verificationStatus'] ?? 'pending_guarantor'),
+                            // Opens the profile, where a rejected housekeeper
+                            // can fix and re-submit.
+                            GestureDetector(
+                              onTap: () async {
+                                await Navigator.push(context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const HkProfileScreen()));
+                                _loadProfile();
+                              },
+                              child: _StatusBadge(
+                                  status: _hkProfile?['verificationStatus'] ?? 'pending_guarantor'),
+                            ),
                           ],
                         ),
                       ),
@@ -440,7 +450,7 @@ class _StatusBadge extends StatelessWidget {
         bg = AppTheme.redLight;
         fg = AppTheme.red;
         icon = Icons.cancel;
-        label = 'Profile rejected';
+        label = LanguageProvider.strings(context).profileRejected;
         break;
       case 'pending_review':
         bg = AppTheme.amberLight;

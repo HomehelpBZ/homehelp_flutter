@@ -431,6 +431,39 @@ class AppStrings {
   String get settingsUnderReview => isAmharic ? 'በግምገማ ላይ' : 'Under review';
   String get settingsNotApproved => isAmharic ? 'አልጸደቀም' : 'Not approved';
   String get settingsNotProvided => isAmharic ? 'አልተሰጠም' : 'Not provided';
+
+  // ── Rejected profile / re-submit ─────────────────────────────────────────
+  String get profileRejected => isAmharic ? 'መገለጫ ውድቅ ተደርጓል' : 'Profile rejected';
+  String get rejectedTitle => isAmharic ? 'መገለጫዎ አልጸደቀም' : 'Your profile was not approved';
+  String get rejectedReasonLabel => isAmharic ? 'ምክንያት' : 'Reason';
+  String get rejectedNoteLabel => isAmharic ? 'ከHomeHelp ማስታወሻ' : 'Note from HomeHelp';
+  String get rejectedFixHint => isAmharic
+      ? 'ችግሩን ያስተካክሉ፣ ከዚያ መገለጫዎን እንደገና ለግምገማ ይላኩ።'
+      : 'Fix the problem, then send your profile for review again.';
+  String get resubmitBtn => isAmharic ? 'እንደገና ለግምገማ ላክ' : 'Resubmit for review';
+  String get resubmitConfirmTitle => isAmharic ? 'እንደገና ለግምገማ ይላክ?' : 'Send for review again?';
+  String get resubmitConfirmMsg => isAmharic
+      ? 'መጀመሪያ ችግሩን ማስተካከልዎን ያረጋግጡ። አስተዳዳሪ መገለጫዎን እንደገና ይገመግማል።'
+      : "Make sure you've fixed the problem first. An admin will review your profile again.";
+  String get resubmitDone => isAmharic
+      ? 'ለግምገማ ተልኳል። ውጤቱን እናሳውቅዎታለን።'
+      : "Sent for review. We'll let you know the result.";
+  String get guarantorVerified => isAmharic ? 'ተረጋግጧል' : 'Verified';
+  String get guarantorPendingCall => isAmharic ? 'የአስተዳዳሪ ጥሪ በመጠባበቅ ላይ' : 'Pending admin call';
+
+  // The admin picks a reason from a fixed English list
+  // (AdminReviewScreen.rejectionReasons); show it in the current language.
+  static const _rejectionReasonsAm = {
+    'ID photo is blurry or unreadable': 'የመታወቂያ ፎቶው ደብዛዛ ነው ወይም አይነበብም',
+    'Selfie does not match ID': 'የራስ ፎቶው ከመታወቂያው ጋር አይመሳሰልም',
+    'Fayda ID number mismatch': 'የፋይዳ መታወቂያ ቁጥሩ አይዛመድም',
+    'Incomplete profile information': 'የመገለጫ መረጃ ያልተሟላ ነው',
+    'Guarantor could not be verified': 'ተያዡን ማረጋገጥ አልተቻለም',
+    'Suspicious or fraudulent document': 'አጠራጣሪ ወይም ሐሰተኛ ሰነድ',
+    'Other': 'ሌላ',
+  };
+  String rejectionReason(String reason) =>
+      isAmharic ? _rejectionReasonsAm[reason] ?? reason : reason;
   String get settingsProfile => isAmharic ? 'መገለጫ' : 'Profile';
   String get settingsProfileVisible => isAmharic ? 'መገለጫ ለቤተሰቦች ይታያል' : 'Profile visible to families';
   String get settingsProfileVisibleSub => isAmharic ? 'ለጊዜው ለመደበቅ ያጥፉ' : 'Turn off to hide your profile temporarily';

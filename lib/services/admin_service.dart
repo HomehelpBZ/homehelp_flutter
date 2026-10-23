@@ -21,13 +21,14 @@ class AdminService {
   }
 
   // ── Get guarantor details ─────────────────────────────────────────────────
+  DocumentReference<Map<String, dynamic>> _guarantorRef(String uid) => _db
+      .collection('users')
+      .doc(uid)
+      .collection('guarantors')
+      .doc('guarantor1');
+
   Future<Map<String, dynamic>?> getGuarantor(String uid) async {
-    final snap = await _db
-        .collection('users')
-        .doc(uid)
-        .collection('guarantors')
-        .doc('guarantor1')
-        .get();
+    final snap = await _guarantorRef(uid).get();
     return snap.exists ? snap.data() : null;
   }
 
@@ -61,6 +62,17 @@ class AdminService {
       'verified': true,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    // The admin calls the guarantor before approving, so approval verifies
+    // them too.
+    final guarantorRef = _guarantorRef(uid);
+    if ((await guarantorRef.get()).exists) {
+      batch.update(guarantorRef, {
+        'verificationStatus': 'verified',
+        'verifiedBy': adminId,
+        'verifiedAt': FieldValue.serverTimestamp(),
+      });
+    }
 
     // Log admin action
     final actionRef = _db.collection('adminActions').doc();

@@ -5,6 +5,7 @@ import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/reviews_section.dart';
+import '../../widgets/hire_widgets.dart';
 import 'hk_edit_profile_screen.dart';
 import 'hk_settings_screen.dart';
 import 'guarantor_id_screen.dart';
@@ -20,7 +21,9 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
   final UserService _userService = UserService();
   Map<String, dynamic>? _profile;
   Map<String, dynamic>? _guarantor;
+  String? _rejectionNote;
   bool _isLoading = true;
+  bool _resubmitting = false;
 
   @override
   void initState() {
@@ -33,10 +36,14 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
     if (uid != null) {
       final profile = await _userService.getHkProfile(uid);
       final guarantor = await _userService.getGuarantor(uid);
+      final note = profile?['verificationStatus'] == 'rejected'
+          ? await _userService.getRejectionNote(uid)
+          : null;
       if (mounted) {
         setState(() {
           _profile = profile;
           _guarantor = guarantor;
+          _rejectionNote = note;
           _isLoading = false;
         });
       }
@@ -44,6 +51,35 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  Future<void> _resubmit() async {
+    final s = LanguageProvider.strings(context);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final ok = await showConfirmDialog(
+      context,
+      title: s.resubmitConfirmTitle,
+      body: s.resubmitConfirmMsg,
+      confirmLabel: s.resubmitBtn,
+      cancelLabel: s.cancel,
+    );
+    if (!ok) return;
+    setState(() => _resubmitting = true);
+    try {
+      await _userService.resubmitForReview(uid: uid);
+      if (mounted) showSuccessToast(context, s.resubmitDone);
+      _loadProfile();
+    } catch (e) {
+      debugPrint('Resubmit failed: $e');
+      if (mounted) showErrorToast(context, s.errGeneric);
+    } finally {
+      if (mounted) setState(() => _resubmitting = false);
+    }
+  }
+
+  void _editProfile() => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const HkEditProfileScreen()))
+      .then((_) => _loadProfile());
 
   String _getInitials(String name) {
     if (name.isEmpty) return '?';
@@ -91,6 +127,7 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
     final dayLabels = s.dayLabels;
     final isApproved = verificationStatus == 'approved';
     final isPendingGuarantor = verificationStatus == 'pending_guarantor';
+    final isRejected = verificationStatus == 'rejected';
 
     return Scaffold(
       body: Column(
@@ -219,16 +256,22 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                                           horizontal: 8,
                                           vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.amberLight,
+                                    color: isRejected
+                                        ? AppTheme.redLight
+                                        : AppTheme.amberLight,
                                     borderRadius:
                                         BorderRadius.circular(
                                             20)),
                                   child: Text(
-                                    isPendingGuarantor
-                                        ? 'Add guarantor ID'
-                                        : 'Under review',
-                                    style: const TextStyle(
-                                        color: AppTheme.amber,
+                                    isRejected
+                                        ? s.profileRejected
+                                        : isPendingGuarantor
+                                            ? 'Add guarantor ID'
+                                            : s.settingsUnderReview,
+                                    style: TextStyle(
+                                        color: isRejected
+                                            ? AppTheme.red
+                                            : AppTheme.amber,
                                         fontSize: 10,
                                         fontWeight:
                                             FontWeight.w500),
@@ -289,6 +332,16 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
               ),
             ),
 
+          // Rejected: show why, and let them fix and re-submit
+          if (isRejected)
+            _RejectedBanner(
+              reason: p['rejectionReason'] as String?,
+              note: _rejectionNote,
+              resubmitting: _resubmitting,
+              onEdit: _editProfile,
+              onResubmit: _resubmit,
+            ),
+
           // Edit banner
           Container(
             color: AppTheme.primaryLight,
@@ -309,12 +362,7 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                           color: AppTheme.primaryText)),
                 ]),
                 ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                              const HkEditProfileScreen()))
-                              .then((_) => _loadProfile()),
+                  onPressed: _editProfile,
                   icon: const Icon(Icons.edit_outlined,
                       size: 13),
                   label: const Text('Edit'),
@@ -489,9 +537,9 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
                         const Divider(height: 0),
                         InfoRow(
                           label: 'Verification',
-                          value: _guarantor!['verificationStatus'] == 'pending'
-                              ? 'Pending admin call'
-                              : 'Verified',
+                          value: _guarantor!['verificationStatus'] == 'verified'
+                              ? s.guarantorVerified
+                              : s.guarantorPendingCall,
                         ),
                       ]),
                     ),
@@ -583,6 +631,88 @@ class _Stat extends StatelessWidget {
                   color: Colors.white.withOpacity(0.6),
                   fontSize: 10)),
         ]),
+      ),
+    );
+  }
+}
+// ── Rejected banner ───────────────────────────────────────────────────────────
+// Why the admin rejected the profile, with ways to fix it and send it back.
+class _RejectedBanner extends StatelessWidget {
+  final String? reason;
+  final String? note;
+  final bool resubmitting;
+  final VoidCallback onEdit;
+  final VoidCallback onResubmit;
+
+  const _RejectedBanner({
+    required this.reason,
+    required this.note,
+    required this.resubmitting,
+    required this.onEdit,
+    required this.onResubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final s = LanguageProvider.strings(context);
+    const text = Color(0xFF791F1F);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      color: AppTheme.redLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.cancel, size: 16, color: AppTheme.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(s.rejectedTitle,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500, color: text)),
+            ),
+          ]),
+          if (reason != null && reason!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text('${s.rejectedReasonLabel}: ${s.rejectionReason(reason!)}',
+                style: const TextStyle(fontSize: 12, color: text)),
+          ],
+          if (note != null && note!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('${s.rejectedNoteLabel}: $note',
+                style: const TextStyle(fontSize: 12, color: text)),
+          ],
+          const SizedBox(height: 8),
+          Text(s.rejectedFixHint,
+              style: const TextStyle(fontSize: 12, color: text, height: 1.4)),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: resubmitting ? null : onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 14),
+                label: Text(s.editProfile),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.red,
+                  side: const BorderSide(color: AppTheme.red),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: resubmitting ? null : onResubmit,
+                icon: const Icon(Icons.send_outlined, size: 14),
+                label: Text(resubmitting ? s.loading : s.resubmitBtn),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.red,
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+          ]),
+        ],
       ),
     );
   }

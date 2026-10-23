@@ -14,6 +14,17 @@ class AdminReviewScreen extends StatefulWidget {
     required this.onActionComplete,
   });
 
+  // Shown to the housekeeper too, translated by AppStrings.rejectionReason.
+  static const rejectionReasons = [
+    'ID photo is blurry or unreadable',
+    'Selfie does not match ID',
+    'Fayda ID number mismatch',
+    'Incomplete profile information',
+    'Guarantor could not be verified',
+    'Suspicious or fraudulent document',
+    'Other',
+  ];
+
   @override
   State<AdminReviewScreen> createState() => _AdminReviewScreenState();
 }
@@ -28,15 +39,6 @@ class _AdminReviewScreenState extends State<AdminReviewScreen> {
   final _noteController = TextEditingController();
   bool _showRejectForm = false;
 
-  static const rejectionReasons = [
-    'ID photo is blurry or unreadable',
-    'Selfie does not match ID',
-    'Fayda ID number mismatch',
-    'Incomplete profile information',
-    'Guarantor could not be verified',
-    'Suspicious or fraudulent document',
-    'Other',
-  ];
 
   @override
   void initState() {
@@ -355,7 +357,7 @@ class _AdminReviewScreenState extends State<AdminReviewScreen> {
                                   fontWeight: FontWeight.w500,
                                   color: AppTheme.grey800)),
                           const SizedBox(height: 8),
-                          ...rejectionReasons.map((r) => GestureDetector(
+                          ...AdminReviewScreen.rejectionReasons.map((r) => GestureDetector(
                                 onTap: () => setState(
                                     () => _selectedReason = r),
                                 child: Container(

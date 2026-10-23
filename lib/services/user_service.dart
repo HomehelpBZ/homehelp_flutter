@@ -308,9 +308,45 @@ class UserService {
     batch.update(queueRef, {
       'status': 'pending',
       'guarantorIdSubmittedAt': FieldValue.serverTimestamp(),
+      ..._clearedReview,
     });
 
     await batch.commit();
+  }
+
+  // Back in the admin queue as unreviewed (the security rules require the
+  // old reviewer fields cleared when a housekeeper re-submits).
+  static final Map<String, dynamic> _clearedReview = {
+    'reviewedBy': null,
+    'reviewedAt': null,
+    'rejectionReason': FieldValue.delete(),
+    'rejectionNote': FieldValue.delete(),
+  };
+
+  // ── Re-submit after a rejection ──────────────────────────────────────────
+  Future<void> resubmitForReview({required String uid}) async {
+    final batch = _db.batch();
+    batch.update(_db.collection('housekeeperProfiles').doc(uid), {
+      'verificationStatus': 'pending_review',
+      'resubmittedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    batch.set(
+      _db.collection('verificationQueue').doc(uid),
+      {
+        'status': 'pending',
+        'submittedAt': FieldValue.serverTimestamp(),
+        ..._clearedReview,
+      },
+      SetOptions(merge: true),
+    );
+    await batch.commit();
+  }
+
+  // The admin's note on the last rejection, if any.
+  Future<String?> getRejectionNote(String uid) async {
+    final doc = await _db.collection('verificationQueue').doc(uid).get();
+    return doc.data()?['rejectionNote'] as String?;
   }
 
   // ── Update bio ───────────────────────────────────────────────────────────
