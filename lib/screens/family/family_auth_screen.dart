@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import 'family_home_screen.dart';
 import '../welcome_screen.dart';
 import '../shared/otp_screen.dart';
+import '../housekeeper/forgot_password_screen.dart';
 
 // ── Landing screen ────────────────────────────────────────────────────────────
 class FamilyAuthScreen extends StatelessWidget {
@@ -732,7 +733,11 @@ class _FamilySignInScreenState extends State<FamilySignInScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen(
+                                  signInScreen: FamilySignInScreen()))),
                       style: TextButton.styleFrom(
                           foregroundColor: AppTheme.primary,
                           padding: EdgeInsets.zero),
