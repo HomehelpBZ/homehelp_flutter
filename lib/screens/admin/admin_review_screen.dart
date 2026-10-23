@@ -81,6 +81,7 @@ class _AdminReviewScreenState extends State<AdminReviewScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
+      debugPrint('Approve failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to approve. Try again.')),
@@ -111,6 +112,7 @@ class _AdminReviewScreenState extends State<AdminReviewScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
+      debugPrint('Reject failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to reject. Try again.')),

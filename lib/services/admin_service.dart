@@ -94,15 +94,18 @@ class AdminService {
       'rejectionNote': note,
     });
 
-    // Update housekeeper profile
+    // Update housekeeper profile. A queue entry can outlive its profile
+    // (deleted account); rejecting it then just closes the entry.
     final profileRef = _db.collection('housekeeperProfiles').doc(uid);
-    batch.update(profileRef, {
-      'verificationStatus': 'rejected',
-      'isVerified': false,
-      'rejectedAt': FieldValue.serverTimestamp(),
-      'rejectedBy': adminId,
-      'rejectionReason': reason,
-    });
+    if ((await profileRef.get()).exists) {
+      batch.update(profileRef, {
+        'verificationStatus': 'rejected',
+        'isVerified': false,
+        'rejectedAt': FieldValue.serverTimestamp(),
+        'rejectedBy': adminId,
+        'rejectionReason': reason,
+      });
+    }
 
     // Log admin action
     final actionRef = _db.collection('adminActions').doc();
