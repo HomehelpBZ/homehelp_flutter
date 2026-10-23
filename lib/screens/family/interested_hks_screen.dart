@@ -150,8 +150,8 @@ class _InterestedHksScreenState extends State<InterestedHksScreen> {
                           final areas = (hk['preferredAreas'] as List?)
                                   ?.cast<String>() ??
                               [];
-                          final location =
-                              areas.isNotEmpty ? areas.first : region;
+                          final location = s.areaName(
+                              areas.isNotEmpty ? areas.first : region);
 
                           return GestureDetector(
                             onTap: () => Navigator.push(

@@ -79,7 +79,9 @@ class _HkProfileScreenState extends State<HkProfileScreen> {
     final skills = (p['skills'] as List?)?.cast<String>() ?? [];
     final languages = (p['languages'] as List?)?.cast<String>() ?? [];
     final jobTypes = (p['jobTypes'] as List?)?.cast<String>() ?? [];
-    final areas = (p['preferredAreas'] as List?)?.cast<String>() ?? [];
+    final areas = ((p['preferredAreas'] as List?)?.cast<String>() ?? [])
+        .map(s.areaName)
+        .toList();
     final salary = p['rates']?['monthlyRate'] as String? ?? '';
     final bio = p['bio'] as String? ?? '';
     final verificationStatus =

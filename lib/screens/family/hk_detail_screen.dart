@@ -83,18 +83,8 @@ class _HkDetailScreenState extends State<HkDetailScreen> {
       return sk;
     }).toList();
 
-    // Preferred areas translation
-    const enAreas = ['Bole', 'Kirkos', 'Yeka', 'Lideta', 'Arada', 'Addis Ketema', 'Gulele', 'Kolfe Keranio', 'Nifas Silk-Lafto', 'Akaky Kaliti'];
-    const amAreas = ['ቦሌ', 'ቄርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ'];
     final rawAreas = (p?['preferredAreas'] as List?)?.cast<String>() ?? [];
-    final translatedAreas = rawAreas.map((area) {
-      final aT = area.trim();
-      final enIdx = enAreas.indexWhere((e) => e.trim() == aT);
-      final amIdx = amAreas.indexWhere((e) => e.trim() == aT);
-      if (s.isAmharic && enIdx >= 0) return amAreas[enIdx];
-      if (!s.isAmharic && amIdx >= 0) return enAreas[amIdx];
-      return area;
-    }).toList();
+    final translatedAreas = rawAreas.map(s.areaName).toList();
     final location = translatedAreas.isNotEmpty ? translatedAreas.first : region;
 
     // Experience translation

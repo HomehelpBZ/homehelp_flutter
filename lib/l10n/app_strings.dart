@@ -223,6 +223,19 @@ class AppStrings {
       ? ['ቦሌ', 'ቄርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'ጉለሌ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ']
       : ['Bole', 'Kirkos', 'Yeka', 'Lideta', 'Arada', 'Gulele', 'Nifas Silk-Lafto', 'Akaky Kaliti'];
 
+  // Every area name a profile may hold, in matching order. Profiles store the
+  // name in the language the housekeeper registered in.
+  static const _enAreas = ['Bole', 'Kirkos', 'Yeka', 'Lideta', 'Arada', 'Addis Ketema', 'Gulele', 'Kolfe Keranio', 'Nifas Silk-Lafto', 'Akaky Kaliti', 'Lemi Kura'];
+  static const _amAreas = ['ቦሌ', 'ቄርቆስ', 'የካ', 'ልደታ', 'አራዳ', 'አዲስ ከተማ', 'ጉለሌ', 'ቆልፌ ቀራኒዮ', 'ንፋስ ስልክ ላፍቶ', 'አቃቂ ቃሊቲ', 'ለሚ ኩራ'];
+
+  // A stored area name in the current language; unknown names are unchanged.
+  String areaName(String stored) {
+    final from = isAmharic ? _enAreas : _amAreas;
+    final to = isAmharic ? _amAreas : _enAreas;
+    final i = from.indexWhere((a) => a == stored.trim());
+    return i >= 0 ? to[i] : stored;
+  }
+
   List<String> get dayLabels =>
       isAmharic ? ['ሰኞ', 'ማክሰ', 'ረቡ', 'ሐሙስ', 'አርብ', 'ቅዳሜ', 'እሑድ'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -259,7 +272,6 @@ class AppStrings {
   String get editProfileSub =>
       isAmharic ? 'ክህሎቶች፣ ደሞዝ፣ ስዕለቶች ያዘምኑ' : 'Update skills, salary, availability';
   String get messagesLabel => isAmharic ? 'መልዕክቶች' : 'Messages';
-  String get messagesSub => isAmharic ? '3 ያልተነበቡ መልዕክቶች ከቤተሰቦች' : '3 unread messages from families';
   String get myProfile => isAmharic ? 'መገለጫዬ' : 'My profile';
   String get myProfileSub =>
       isAmharic ? 'ቀጥሎ ያለ መገለጫዎን ይመልከቱ እና ያስተዳድሩ' : 'View and manage your live profile';
@@ -272,8 +284,6 @@ class AppStrings {
 
 
   // ── Messages / Chat ──────────────────────────────────────────────────────
-  String get familiesInterested =>
-      isAmharic ? 'ቤተሰቦች ይቀጥሩዎት ፍላጎት አላቸው' : 'Families interested in hiring you';
   String get typeMessage => isAmharic ? 'መልዕክት ይጻፉ…' : 'Type a message…';
   String get noMessages => isAmharic ? 'ምንም መልዕክቶች የሉም' : 'No messages yet';
   String get readyToHire => isAmharic ? 'ለቅጥር ዝግጁ ነዎት?' : 'Ready to hire';
