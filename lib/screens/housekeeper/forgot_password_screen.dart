@@ -5,7 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
 import '../../services/auth_service.dart';
-import 'hk_signin_screen.dart';
+import 'hk_auth_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -338,7 +338,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             label: s.goToSignIn,
             onPressed: () => Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const HkSigninScreen()),
+              MaterialPageRoute(builder: (_) => const HkSignInScreen()),
               (r) => false,
             ),
           ),
