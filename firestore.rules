@@ -2,15 +2,62 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // The write changes only these fields / none of these fields.
+    function changesOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    function keepsFields(keys) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(keys);
+    }
+
+    // A user can't verify their own guarantor or ID document: the review
+    // fields stay as they are, or are reset to an unreviewed state when the
+    // housekeeper re-submits (status one of unreviewedStatuses).
+    function ownReviewedDoc(statusField, byField, atField, unreviewedStatuses) {
+      return (resource != null && keepsFields([statusField, byField, atField])) ||
+        (request.resource.data.get(statusField, 'pending') in unreviewedStatuses &&
+         request.resource.data.get(byField, null) == null &&
+         request.resource.data.get(atField, null) == null);
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId) || isAdmin();
+      // One role per account. Users can't make themselves verified or admin.
+      allow create: if isOwner(userId) &&
+        request.resource.data.roles is list &&
+        request.resource.data.roles.size() == 1 &&
+        request.resource.data.roles[0] in ['family', 'housekeeper'] &&
+        request.resource.data.get('verified', false) == false &&
+        request.resource.data.get('adminLevel', null) == null;
+      allow update: if
+        (isOwner(userId) && keepsFields(['roles', 'verified', 'adminLevel'])) ||
+        // Approving a housekeeper marks their account verified.
+        (isAdmin() && changesOnly(['verified', 'updatedAt']));
+      allow delete: if isOwner(userId);
 
       match /guarantors/{doc} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if
+          (isOwner(userId) &&
+            ownReviewedDoc('verificationStatus', 'verifiedBy', 'verifiedAt',
+              ['pending'])) ||
+          (isAdmin() && resource != null &&
+            changesOnly(['verificationStatus', 'verifiedBy', 'verifiedAt']));
+        allow delete: if isOwner(userId);
       }
 
       match /documents/{doc} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if
+          (isOwner(userId) &&
+            ownReviewedDoc('status', 'reviewedBy', 'reviewedAt', ['pending'])) ||
+          (isAdmin() && resource != null &&
+            changesOnly(['status', 'reviewedBy', 'reviewedAt']));
+        allow delete: if isOwner(userId);
       }
     }
 
@@ -27,18 +74,42 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Statuses a housekeeper sets on their own profile while registering or
+    // re-submitting after a rejection. Only admins set 'approved' / 'rejected'.
+    function selfVerificationStatus(status) {
+      return status in ['pending', 'pending_guarantor', 'pending_review'];
+    }
+
+    // Fields only an admin's approve / reject sets.
+    function adminVerificationFields() {
+      return ['isVerified', 'approvedAt', 'approvedBy', 'rejectedAt',
+              'rejectedBy', 'rejectionReason'];
+    }
+
     match /housekeeperProfiles/{userId} {
-      allow read: if resource.data.verificationStatus == 'approved'
-                  || (request.auth != null && request.auth.uid == userId);
-      // The housekeeper owns the profile but can't set their own rating.
-      allow create: if request.auth != null && request.auth.uid == userId &&
+      allow read: if resource.data.verificationStatus == 'approved' ||
+        isOwner(userId) || isAdmin();
+      // The housekeeper owns the profile but can't set their own rating or
+      // approve themselves.
+      allow create: if isOwner(userId) &&
         !hasProfile('familyProfiles', userId) &&
         request.resource.data.get('ratingAverage', 0) == 0 &&
-        request.resource.data.get('ratingCount', 0) == 0;
-      allow update: if request.auth != null && request.auth.uid == userId &&
-        !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['ratingAverage', 'ratingCount']);
-      allow delete: if request.auth != null && request.auth.uid == userId;
+        request.resource.data.get('ratingCount', 0) == 0 &&
+        request.resource.data.get('isVerified', false) == false &&
+        selfVerificationStatus(
+          request.resource.data.get('verificationStatus', 'pending'));
+      allow update: if isOwner(userId) &&
+        keepsFields(['ratingAverage', 'ratingCount']) &&
+        keepsFields(adminVerificationFields()) &&
+        (keepsFields(['verificationStatus']) ||
+         selfVerificationStatus(request.resource.data.verificationStatus));
+      // Deleting and re-creating would wipe the rating, so only admins delete.
+      allow delete: if isAdmin();
+      // Admins approve or reject.
+      allow update: if isAdmin() &&
+        changesOnly(['verificationStatus', 'updatedAt'].concat(
+          adminVerificationFields())) &&
+        request.resource.data.verificationStatus in ['approved', 'rejected'];
       // A family's review changes the rating, in the same write as the review:
       // adding one rating, or changing it when they edit their review.
       // Admins take a rating out when they remove an abusive review.
@@ -230,19 +301,49 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
     }
 
+    // One entry per housekeeper waiting for review. The housekeeper submits
+    // it (status 'pending_guarantor', then 'pending'); only admins review it.
     match /verificationQueue/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow read, update: if request.auth != null;
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if
+        (isOwner(userId) &&
+          request.resource.data.status in ['pending_guarantor', 'pending'] &&
+          ownReviewedDoc('status', 'reviewedBy', 'reviewedAt',
+            ['pending_guarantor', 'pending'])) ||
+        (isAdmin() && resource != null &&
+          request.resource.data.status in ['approved', 'rejected'] &&
+          request.resource.data.reviewedBy == request.auth.uid);
     }
 
+    // Audit log of admin decisions: admins add entries, nobody edits them.
     match /adminActions/{doc} {
-      allow read, write: if request.auth != null;
+      allow read: if isAdmin();
+      allow create: if isAdmin() &&
+        request.resource.data.adminId == request.auth.uid;
     }
 
     match /jobs/{jobId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      // Families post jobs as themselves.
+      allow create: if request.auth != null &&
+        request.resource.data.familyId == request.auth.uid &&
+        hasProfile('familyProfiles', request.auth.uid) &&
+        request.resource.data.get('interestedHks', []).size() == 0 &&
+        request.resource.data.get('interestedCount', 0) == 0;
+      allow update: if
+        // The family edits their own job, but not who's interested.
+        (request.auth != null &&
+          resource.data.familyId == request.auth.uid &&
+          keepsFields(['familyId', 'interestedHks', 'interestedCount'])) ||
+        // A housekeeper adds only themselves to the interested list, once.
+        (request.auth != null &&
+          hasProfile('housekeeperProfiles', request.auth.uid) &&
+          changesOnly(['interestedHks', 'interestedCount', 'updatedAt']) &&
+          !(request.auth.uid in resource.data.get('interestedHks', [])) &&
+          request.resource.data.interestedHks ==
+            resource.data.get('interestedHks', []).concat([request.auth.uid]) &&
+          request.resource.data.interestedCount ==
+            resource.data.get('interestedCount', 0) + 1);
       allow delete: if request.auth != null &&
                     resource.data.familyId == request.auth.uid;
     }
