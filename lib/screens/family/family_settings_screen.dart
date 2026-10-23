@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
+import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
 import '../welcome_screen.dart';
 
 class FamilySettingsScreen extends StatefulWidget {
@@ -15,6 +17,26 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
   bool _notifyMessages = true;
   bool _notifyNewHk = false;
   bool _emailUpdates = true;
+  final _authService = AuthService();
+  Map<String, dynamic>? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  // Guests have no profile; their account rows stay blank.
+  Future<void> _loadProfile() async {
+    if (!AuthService.isSignedIn) return;
+    try {
+      final profile =
+          await UserService().getFamilyProfile(_authService.currentUser!.uid);
+      if (mounted) setState(() => _profile = profile);
+    } catch (e) {
+      debugPrint('Settings profile load failed: $e');
+    }
+  }
 
   void _signOut(s) {
     showDialog(
@@ -30,11 +52,16 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.red),
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-              (r) => false,
-            ),
+            onPressed: () async {
+              await _authService.signOut();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                  (r) => false,
+                );
+              }
+            },
             child: Text(s.settingsSignOut),
           ),
         ],
@@ -57,9 +84,13 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
             _SettingsCard(
               title: s.settingsAccount,
               children: [
-                _InfoTile(icon: Icons.person_outline, label: s.settingsName, value: 'Abebe Kebede'),
+                _InfoTile(icon: Icons.person_outline, label: s.settingsName,
+                    value: _profile?['fullName'] as String? ?? ''),
                 const Divider(height: 0),
-                _InfoTile(icon: Icons.phone_outlined, label: s.settingsPhone, value: '+251 91 000 0001'),
+                _InfoTile(icon: Icons.phone_outlined, label: s.settingsPhone,
+                    value: (_profile?['phone'] as String? ?? '').isEmpty
+                        ? ''
+                        : _authService.toE164(_profile!['phone'] as String)),
                 const Divider(height: 0),
                 _NavTile(
                   icon: Icons.edit_outlined,

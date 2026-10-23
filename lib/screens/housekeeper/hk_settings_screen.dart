@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../l10n/language_provider.dart';
+import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
 import '../welcome_screen.dart';
 
 class HkSettingsScreen extends StatefulWidget {
@@ -17,6 +19,25 @@ class _HkSettingsScreenState extends State<HkSettingsScreen> {
   bool _notifyApprovals = true;
   bool _profileVisible = true;
   bool _showPhone = false;
+  final _authService = AuthService();
+  Map<String, dynamic>? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final uid = _authService.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final profile = await UserService().getHkProfile(uid);
+      if (mounted) setState(() => _profile = profile);
+    } catch (e) {
+      debugPrint('Settings profile load failed: $e');
+    }
+  }
 
   void _signOut(s) {
     showDialog(
@@ -33,11 +54,16 @@ class _HkSettingsScreenState extends State<HkSettingsScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.red),
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-              (r) => false,
-            ),
+            onPressed: () async {
+              await _authService.signOut();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                  (r) => false,
+                );
+              }
+            },
             child: Text(s.settingsSignOut),
           ),
         ],
@@ -49,6 +75,15 @@ class _HkSettingsScreenState extends State<HkSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = LanguageProvider.strings(context);
+    final p = _profile ?? {};
+    final phone = p['phone'] as String? ?? '';
+    final faydaId = (p['faydaId'] as String? ?? '').trim();
+    final status = p['verificationStatus'] as String? ?? '';
+    final verification = status == 'approved'
+        ? s.settingsVerified
+        : status == 'rejected'
+            ? s.settingsNotApproved
+            : s.settingsUnderReview;
     return Scaffold(
       appBar: navyAppBar(s.settings),
       body: SingleChildScrollView(
@@ -60,16 +95,23 @@ class _HkSettingsScreenState extends State<HkSettingsScreen> {
             _SettingsCard(
               title: s.settingsAccount,
               children: [
-                _InfoTile(icon: Icons.person_outline, label: s.settingsName, value: 'Tigist Bekele'),
+                _InfoTile(icon: Icons.person_outline, label: s.settingsName,
+                    value: p['fullName'] as String? ?? ''),
                 const Divider(height: 0),
-                _InfoTile(icon: Icons.phone_outlined, label: s.settingsPhone, value: '+251 91 234 5678'),
+                _InfoTile(icon: Icons.phone_outlined, label: s.settingsPhone,
+                    value: phone.isEmpty ? '' : _authService.toE164(phone)),
                 const Divider(height: 0),
-                _InfoTile(icon: Icons.badge_outlined, label: s.settingsFaydaId, value: 'ETH-2024-00183721'),
+                _InfoTile(icon: Icons.badge_outlined, label: s.settingsFaydaId,
+                    value: faydaId.isEmpty ? s.settingsNotProvided : faydaId),
                 const Divider(height: 0),
                 _InfoTile(icon: Icons.verified_user_outlined,
                     label: s.settingsVerification,
-                    value: s.settingsVerified,
-                    valueColor: AppTheme.primary),
+                    value: _profile == null ? '' : verification,
+                    valueColor: status == 'approved'
+                        ? AppTheme.primary
+                        : status == 'rejected'
+                            ? AppTheme.red
+                            : null),
               ],
             ),
             const SizedBox(height: 14),

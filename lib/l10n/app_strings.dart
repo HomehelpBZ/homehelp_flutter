@@ -428,6 +428,9 @@ class AppStrings {
   String get settingsFaydaId => isAmharic ? 'ፋይዳ መታወቂያ' : 'Fayda ID';
   String get settingsVerification => isAmharic ? 'ማረጋገጫ' : 'Verification';
   String get settingsVerified => isAmharic ? 'መታወቂያ ተረጋግጧል ✓' : 'ID Verified ✓';
+  String get settingsUnderReview => isAmharic ? 'በግምገማ ላይ' : 'Under review';
+  String get settingsNotApproved => isAmharic ? 'አልጸደቀም' : 'Not approved';
+  String get settingsNotProvided => isAmharic ? 'አልተሰጠም' : 'Not provided';
   String get settingsProfile => isAmharic ? 'መገለጫ' : 'Profile';
   String get settingsProfileVisible => isAmharic ? 'መገለጫ ለቤተሰቦች ይታያል' : 'Profile visible to families';
   String get settingsProfileVisibleSub => isAmharic ? 'ለጊዜው ለመደበቅ ያጥፉ' : 'Turn off to hide your profile temporarily';
